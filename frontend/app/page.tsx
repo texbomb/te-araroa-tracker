@@ -2,6 +2,7 @@
 
 import MapView from '@/components/Map/MapView'
 import UploadGPX from '@/components/UploadGPX'
+import DailyTrekTracker from '@/components/DailyTrekTracker'
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 
@@ -44,9 +45,9 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen">
-      <header className="bg-emerald-700 text-white p-4 shadow-lg">
-        <h1 className="text-2xl font-bold">Te Araroa Trail Tracker</h1>
-        <p className="text-emerald-100">Following the journey through New Zealand</p>
+      <header className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white p-6 shadow-xl">
+        <h1 className="text-3xl font-bold tracking-tight">Te Araroa Trail Tracker</h1>
+        <p className="text-emerald-50 mt-1 font-light">Following the journey through New Zealand</p>
       </header>
 
       <main className="flex-1 flex flex-col lg:flex-row">
@@ -54,43 +55,47 @@ export default function Home() {
           <MapView key={mapKey} />
         </div>
 
-        <aside className="lg:w-96 bg-white p-6 shadow-lg overflow-y-auto">
-          <h2 className="text-xl font-semibold mb-4">Trail Progress</h2>
+        <aside className="lg:w-96 bg-white p-6 shadow-lg overflow-y-auto space-y-6">
+          <DailyTrekTracker />
 
-          {loading ? (
-            <p className="text-gray-500">Loading stats...</p>
-          ) : stats ? (
-            <div className="space-y-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600">Total Distance</p>
-                <p className="text-2xl font-bold text-emerald-700">
-                  {stats.total_distance_km} km
-                </p>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600">Elevation Gain</p>
-                <p className="text-2xl font-bold text-emerald-700">
-                  {stats.total_elevation_m.toLocaleString()} m
-                </p>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600">Days on Trail</p>
-                <p className="text-2xl font-bold text-emerald-700">
-                  {stats.total_days}
-                </p>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600">Average per Day</p>
-                <p className="text-2xl font-bold text-emerald-700">
-                  {stats.avg_distance_per_day} km
-                </p>
-              </div>
-            </div>
-          ) : (
-            <p className="text-gray-500">No activity data yet</p>
-          )}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Overall Progress</h2>
 
-          <div className="mt-6 pt-6 border-t border-gray-200">
+            {loading ? (
+              <p className="text-gray-500">Loading stats...</p>
+            ) : stats ? (
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600">Total Distance</p>
+                  <p className="text-2xl font-bold text-emerald-700">
+                    {stats.total_distance_km} km
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600">Elevation Gain</p>
+                  <p className="text-2xl font-bold text-emerald-700">
+                    {stats.total_elevation_m.toLocaleString()} m
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600">Days on Trail</p>
+                  <p className="text-2xl font-bold text-emerald-700">
+                    {stats.total_days}
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-600">Average per Day</p>
+                  <p className="text-2xl font-bold text-emerald-700">
+                    {stats.avg_distance_per_day} km
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-500">No activity data yet</p>
+            )}
+          </div>
+
+          <div className="pt-6 border-t border-gray-200">
             <h3 className="text-lg font-semibold mb-3">Upload Activity</h3>
             <UploadGPX onUploadComplete={handleUploadComplete} />
           </div>
