@@ -1,23 +1,24 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from typing import Optional
 
 
 class Settings(BaseSettings):
-    # Supabase
-    supabase_url: str
-    supabase_service_key: str
+    # Supabase (optional - not currently used)
+    supabase_url: Optional[str] = None
+    supabase_service_key: Optional[str] = None
 
-    # Garmin
-    garmin_email: str
-    garmin_password: str
+    # Garmin (optional - only needed for auto-sync)
+    garmin_email: Optional[str] = None
+    garmin_password: Optional[str] = None
 
-    # Cloudinary
-    cloudinary_cloud_name: str
-    cloudinary_api_key: str
-    cloudinary_api_secret: str
+    # Cloudinary (optional - not currently used)
+    cloudinary_cloud_name: Optional[str] = None
+    cloudinary_api_key: Optional[str] = None
+    cloudinary_api_secret: Optional[str] = None
 
-    # Admin
-    admin_password: str
+    # Admin (optional - for future authentication)
+    admin_password: Optional[str] = None
 
     # App
     app_name: str = "Te Araroa Tracker"
