@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"venv/Scripts/python.exe\" test_garmin_direct.py)",
+      "Bash(\"venv/Scripts/python.exe\" test_garmin_workaround.py)"
+    ]
+  }
+}

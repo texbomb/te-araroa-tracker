@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+backend/venv/
+backend/env/
+backend/ENV/
+backend/.venv
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+backend/test.db
+
+# Environment
+.env
+.env.local
+backend/.env
+frontend/.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test/temp files
+backend/tests/
+backend/gpx_data/
+backend/docs/
+gpx_data/
+nul
+
+# Logs
+*.log
+
+# Node
+node_modules/
+frontend/node_modules/
+.next/
+out/
+dist/
+
+# Garmin temp tokens
+backend/temp_garth_tokens/
