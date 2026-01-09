@@ -1,9 +1,9 @@
 'use client'
 
 import MapView from '@/components/Map/MapView'
-import UploadGPX from '@/components/UploadGPX'
 import DailyTrekTracker from '@/components/DailyTrekTracker'
 import TrekHistoryList from '@/components/TrekHistoryList'
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 
@@ -43,17 +43,6 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [])
 
-  const handleUploadComplete = () => {
-    // Refresh stats
-    fetchStats()
-    // Force map to reload by changing key
-    setMapKey(prev => prev + 1)
-    // Force daily tracker to reload
-    setDailyTrackerKey(prev => prev + 1)
-    // Force history list to reload
-    setHistoryKey(prev => prev + 1)
-  }
-
   const handleActivitySelect = (activityId: number) => {
     setSelectedActivityId(activityId)
   }
@@ -69,8 +58,21 @@ export default function Home() {
   return (
     <div className="flex flex-col h-screen">
       <header className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white p-6 shadow-xl">
-        <h1 className="text-3xl font-bold tracking-tight">Te Araroa Trail Tracker</h1>
-        <p className="text-emerald-50 mt-1 font-light">Following the journey through New Zealand</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Te Araroa Trail Tracker</h1>
+            <p className="text-emerald-50 mt-1 font-light">Following the journey through New Zealand</p>
+          </div>
+          <Link
+            href="/admin"
+            className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            Admin
+          </Link>
+        </div>
       </header>
 
       <main className="flex-1 flex flex-col lg:flex-row">
@@ -153,26 +155,14 @@ export default function Home() {
                     <p className="text-gray-500">No activity data yet</p>
                   )}
                 </div>
-
-                <div className="pt-6 border-t border-gray-200">
-                  <h3 className="text-lg font-semibold mb-3">Upload Activity</h3>
-                  <UploadGPX onUploadComplete={handleUploadComplete} />
-                </div>
               </>
             ) : (
-              <>
-                <TrekHistoryList
-                  key={historyKey}
-                  selectedActivityId={selectedActivityId}
-                  onActivitySelect={handleActivitySelect}
-                  refreshKey={historyKey}
-                />
-
-                <div className="pt-6 border-t border-gray-200">
-                  <h3 className="text-lg font-semibold mb-3">Upload Activity</h3>
-                  <UploadGPX onUploadComplete={handleUploadComplete} />
-                </div>
-              </>
+              <TrekHistoryList
+                key={historyKey}
+                selectedActivityId={selectedActivityId}
+                onActivitySelect={handleActivitySelect}
+                refreshKey={historyKey}
+              />
             )}
           </div>
         </aside>

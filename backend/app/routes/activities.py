@@ -123,3 +123,21 @@ async def get_activity(activity_id: int, request: Request, response: Response, d
         raise HTTPException(status_code=404, detail="Activity not found")
 
     return activity
+
+
+@router.delete("/{activity_id}")
+@limiter.limit("10/minute")  # Limit deletions
+async def delete_activity(activity_id: int, request: Request, db: Session = Depends(get_db)):
+    """Delete an activity by ID (admin only)"""
+    activity = db.query(Activity).filter(Activity.id == activity_id).first()
+
+    if not activity:
+        raise HTTPException(status_code=404, detail="Activity not found")
+
+    db.delete(activity)
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"Activity {activity_id} deleted successfully"
+    }
