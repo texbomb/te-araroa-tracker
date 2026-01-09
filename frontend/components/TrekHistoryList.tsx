@@ -53,9 +53,9 @@ export default function TrekHistoryList({
     try {
       setLoading(true)
       const data = await api.getActivities()
-      // Sort by date ascending (oldest first) for chronological view
+      // Sort by date descending (newest first)
       const sorted = data.sort((a: Activity, b: Activity) =>
-        new Date(a.date).getTime() - new Date(b.date).getTime()
+        new Date(b.date).getTime() - new Date(a.date).getTime()
       )
       setActivities(sorted)
     } catch (error) {
