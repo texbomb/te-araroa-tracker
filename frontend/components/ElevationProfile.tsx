@@ -12,12 +12,13 @@ interface GPSPoint {
 
 interface ElevationProfileProps {
   gpsData: GPSPoint[]
+  height?: number
 }
 
 // Helper function to convert degrees to radians
 const toRad = (value: number) => (value * Math.PI) / 180
 
-export default function ElevationProfile({ gpsData }: ElevationProfileProps) {
+export default function ElevationProfile({ gpsData, height = 150 }: ElevationProfileProps) {
   // Process GPS data to create elevation profile with cumulative distance
   const chartData = useMemo(() => {
     if (!gpsData || gpsData.length === 0) return []
@@ -76,7 +77,7 @@ export default function ElevationProfile({ gpsData }: ElevationProfileProps) {
     <div className="mt-4">
       <h3 className="text-sm font-semibold text-gray-700 mb-2">Elevation Profile</h3>
 
-      <ResponsiveContainer width="100%" height={150}>
+      <ResponsiveContainer width="100%" height={height}>
         <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
           <defs>
             <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">

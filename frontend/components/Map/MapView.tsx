@@ -18,9 +18,15 @@ interface Activity {
   raw_gps_data: Array<{ lat: number; lon: number; elevation: number; time: string }>
 }
 
-export default function MapView() {
+interface MapViewProps {
+  selectedActivityId?: number | null
+  onActivitySelect?: (activityId: number | null) => void
+}
+
+export default function MapView({ selectedActivityId, onActivitySelect }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
+  const activitiesRef = useRef<Activity[]>([])
 
   useEffect(() => {
     if (map.current || !mapContainer.current) return // Initialize map only once
@@ -38,7 +44,9 @@ export default function MapView() {
     const mapInstance = map.current
 
     // Load activities and display them on the map
-    mapInstance.on('load', async () => {
+    const loadActivities = async () => {
+      if (!mapInstance) return
+
       try {
         // Add Te Araroa Trail overlay (South Island)
         // Trail data source: https://www.teararoa.org.nz/
@@ -77,6 +85,7 @@ export default function MapView() {
         }
 
         const activities: Activity[] = await api.getActivities()
+        activitiesRef.current = activities
 
         if (activities.length === 0) {
           console.log('No activities to display')
@@ -87,6 +96,7 @@ export default function MapView() {
         const bounds = new mapboxgl.LngLatBounds()
 
         activities.forEach((activity, index) => {
+          const isSelected = activity.id === selectedActivityId
           if (!activity.raw_gps_data || activity.raw_gps_data.length === 0) {
             return
           }
@@ -125,10 +135,30 @@ export default function MapView() {
               'line-cap': 'round',
             },
             paint: {
-              'line-color': index === activities.length - 1 ? '#10b981' : '#059669', // Latest activity in lighter green
-              'line-width': 4,
-              'line-opacity': 0.8,
+              'line-color': isSelected
+                ? '#f59e0b' // Orange for selected
+                : index === activities.length - 1
+                ? '#10b981' // Light green for latest
+                : '#059669', // Dark green for others
+              'line-width': isSelected ? 6 : 4,
+              'line-opacity': isSelected ? 1 : 0.8,
             },
+          })
+
+          // Make the route clickable
+          mapInstance.on('click', `activity-line-${activity.id}`, () => {
+            if (onActivitySelect) {
+              onActivitySelect(activity.id)
+            }
+          })
+
+          // Change cursor on hover
+          mapInstance.on('mouseenter', `activity-line-${activity.id}`, () => {
+            mapInstance.getCanvas().style.cursor = 'pointer'
+          })
+
+          mapInstance.on('mouseleave', `activity-line-${activity.id}`, () => {
+            mapInstance.getCanvas().style.cursor = ''
           })
 
           // Add start marker
@@ -208,7 +238,9 @@ export default function MapView() {
       } catch (error) {
         console.error('Failed to load activities:', error)
       }
-    })
+    }
+
+    mapInstance.on('load', loadActivities)
 
     // Clean up on unmount
     return () => {
@@ -218,6 +250,51 @@ export default function MapView() {
       }
     }
   }, [])
+
+  // Update activity styling when selection changes
+  useEffect(() => {
+    if (!map.current || !map.current.isStyleLoaded()) return
+
+    const mapInstance = map.current
+    const activities = activitiesRef.current
+
+    activities.forEach((activity, index) => {
+      const layerId = `activity-line-${activity.id}`
+      if (!mapInstance.getLayer(layerId)) return
+
+      const isSelected = activity.id === selectedActivityId
+      const isLatest = index === activities.length - 1
+
+      mapInstance.setPaintProperty(
+        layerId,
+        'line-color',
+        isSelected
+          ? '#f59e0b' // Orange for selected
+          : isLatest
+          ? '#10b981' // Light green for latest
+          : '#059669' // Dark green for others
+      )
+
+      mapInstance.setPaintProperty(layerId, 'line-width', isSelected ? 6 : 4)
+      mapInstance.setPaintProperty(layerId, 'line-opacity', isSelected ? 1 : 0.8)
+    })
+
+    // Zoom to selected activity if one is selected
+    if (selectedActivityId) {
+      const selectedActivity = activities.find(a => a.id === selectedActivityId)
+      if (selectedActivity && selectedActivity.raw_gps_data.length > 0) {
+        const bounds = new mapboxgl.LngLatBounds()
+        selectedActivity.raw_gps_data.forEach(point => {
+          bounds.extend([point.lon, point.lat])
+        })
+        mapInstance.fitBounds(bounds, {
+          padding: 50,
+          maxZoom: 13,
+          duration: 1000
+        })
+      }
+    }
+  }, [selectedActivityId])
 
   return (
     <div
