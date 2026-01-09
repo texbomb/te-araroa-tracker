@@ -2,7 +2,7 @@
 Activities API routes
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional
@@ -10,7 +10,10 @@ from datetime import date, datetime
 from app.database import get_db
 from app.models.activity import Activity
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
+limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
 
 
@@ -50,12 +53,18 @@ class StatsResponse(BaseModel):
 
 
 @router.get("", response_model=List[ActivityResponse])
+@limiter.limit("60/minute")  # Allow reasonable polling frequency
 async def get_activities(
+    request: Request,
+    response: Response,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """Get all activities, optionally filtered by date range"""
+    # Cache for 2 minutes - activities don't change frequently
+    response.headers["Cache-Control"] = "public, max-age=120"
+
     query = db.query(Activity)
 
     if start_date:
@@ -68,8 +77,11 @@ async def get_activities(
 
 
 @router.get("/stats", response_model=StatsResponse)
-async def get_stats(db: Session = Depends(get_db)):
+@limiter.limit("60/minute")  # Match activities endpoint limit
+async def get_stats(request: Request, response: Response, db: Session = Depends(get_db)):
     """Get summary statistics for all activities"""
+    # Cache for 5 minutes - stats change infrequently (only on new activities)
+    response.headers["Cache-Control"] = "public, max-age=300"
 
     # Get aggregates
     stats = db.query(
@@ -99,8 +111,12 @@ async def get_stats(db: Session = Depends(get_db)):
 
 
 @router.get("/{activity_id}", response_model=ActivityResponse)
-async def get_activity(activity_id: int, db: Session = Depends(get_db)):
+@limiter.limit("60/minute")  # Allow reasonable access to individual activities
+async def get_activity(activity_id: int, request: Request, response: Response, db: Session = Depends(get_db)):
     """Get a single activity by ID"""
+    # Cache individual activities for 10 minutes - they never change once created
+    response.headers["Cache-Control"] = "public, max-age=600"
+
     activity = db.query(Activity).filter(Activity.id == activity_id).first()
 
     if not activity:

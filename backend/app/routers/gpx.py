@@ -2,17 +2,20 @@
 GPX file upload endpoint for manual activity uploads
 """
 
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 from datetime import datetime
 import gpxpy
 import gpxpy.gpx
 import polyline
 from typing import List, Dict, Any
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.database import get_db
 from app.models.activity import Activity
 
+limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(prefix="/gpx", tags=["gpx"])
 
 
@@ -87,7 +90,8 @@ def parse_gpx_file(gpx_content: str) -> Dict[str, Any]:
 
 
 @router.post("/upload")
-async def upload_gpx_file(file: UploadFile = File(...)):
+@limiter.limit("20/hour")  # Limit file uploads to prevent abuse
+async def upload_gpx_file(request: Request, file: UploadFile = File(...)):
     """
     Upload a GPX file and parse it into activity data
 
@@ -118,7 +122,8 @@ async def upload_gpx_file(file: UploadFile = File(...)):
 
 
 @router.post("/upload-and-save")
-async def upload_and_save_gpx(file: UploadFile = File(...), db: Session = Depends(get_db)):
+@limiter.limit("20/hour")  # Limit file uploads to prevent abuse
+async def upload_and_save_gpx(request: Request, file: UploadFile = File(...), db: Session = Depends(get_db)):
     """
     Upload a GPX file, parse it, and save to database
 
