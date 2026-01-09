@@ -14,6 +14,9 @@ interface ElevationProfileProps {
   gpsData: GPSPoint[]
 }
 
+// Helper function to convert degrees to radians
+const toRad = (value: number) => (value * Math.PI) / 180
+
 export default function ElevationProfile({ gpsData }: ElevationProfileProps) {
   // Process GPS data to create elevation profile with cumulative distance
   const chartData = useMemo(() => {
@@ -48,8 +51,6 @@ export default function ElevationProfile({ gpsData }: ElevationProfileProps) {
 
     return data
   }, [gpsData])
-
-  const toRad = (value: number) => (value * Math.PI) / 180
 
   // Calculate stats for display
   const stats = useMemo(() => {
