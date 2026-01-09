@@ -9,5 +9,6 @@ garminconnect>=0.2.12
 python-multipart>=0.0.6
 polyline>=2.0.0
 requests>=2.31.0
+httpx>=0.25.0
 gpxpy>=1.6.2
 slowapi>=0.1.9

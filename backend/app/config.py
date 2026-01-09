@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     # Admin (optional - for future authentication)
     admin_password: Optional[str] = None
 
+    # Strava OAuth (optional - only needed for auto-sync)
+    strava_client_id: Optional[str] = None
+    strava_client_secret: Optional[str] = None
+    strava_webhook_verify_token: Optional[str] = None
+
     # App
     app_name: str = "Te Araroa Tracker"
     debug: bool = False

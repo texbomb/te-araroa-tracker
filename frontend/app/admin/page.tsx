@@ -22,6 +22,9 @@ export default function AdminPage() {
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
+  const [stravaConnected, setStravaConnected] = useState(false)
+  const [stravaLoading, setStravaLoading] = useState(false)
+  const [stravaSyncing, setStravaSyncing] = useState(false)
 
   const fetchActivities = async () => {
     try {
@@ -42,6 +45,86 @@ export default function AdminPage() {
   const handleAuthenticated = () => {
     setIsAuthenticated(true)
     fetchActivities()
+    checkStravaStatus()
+  }
+
+  const checkStravaStatus = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/strava/auth/status`)
+      const data = await response.json()
+      setStravaConnected(data.connected)
+    } catch (error) {
+      console.error('Failed to check Strava status:', error)
+    }
+  }
+
+  const handleStravaConnect = async () => {
+    try {
+      setStravaLoading(true)
+      const redirectUri = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/strava/callback`
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/strava/auth/authorize?redirect_uri=${encodeURIComponent(redirectUri)}`
+      )
+      const data = await response.json()
+
+      // Open Strava authorization in new window
+      window.open(data.authorization_url, '_blank', 'width=600,height=700')
+
+      // Poll for connection status
+      const pollInterval = setInterval(async () => {
+        const statusResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/strava/auth/status`)
+        const statusData = await statusResponse.json()
+
+        if (statusData.connected) {
+          clearInterval(pollInterval)
+          setStravaConnected(true)
+          setStravaLoading(false)
+          alert('Successfully connected to Strava!')
+        }
+      }, 2000)
+
+      // Stop polling after 2 minutes
+      setTimeout(() => clearInterval(pollInterval), 120000)
+    } catch (error) {
+      console.error('Failed to connect to Strava:', error)
+      alert('Failed to connect to Strava')
+      setStravaLoading(false)
+    }
+  }
+
+  const handleStravaDisconnect = async () => {
+    if (!confirm('Are you sure you want to disconnect Strava?')) return
+
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/strava/auth/disconnect`, {
+        method: 'POST'
+      })
+      setStravaConnected(false)
+      alert('Successfully disconnected from Strava')
+    } catch (error) {
+      console.error('Failed to disconnect Strava:', error)
+      alert('Failed to disconnect from Strava')
+    }
+  }
+
+  const handleStravaSync = async () => {
+    try {
+      setStravaSyncing(true)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/strava/sync?days=30`, {
+        method: 'POST'
+      })
+      const data = await response.json()
+
+      if (data.success) {
+        alert(`Successfully synced ${data.new_activities} new activities from Strava`)
+        fetchActivities()
+      }
+    } catch (error) {
+      console.error('Failed to sync Strava activities:', error)
+      alert('Failed to sync Strava activities')
+    } finally {
+      setStravaSyncing(false)
+    }
   }
 
   const handleUploadComplete = () => {
@@ -131,6 +214,92 @@ export default function AdminPage() {
               <UploadGPX onUploadComplete={handleUploadComplete} />
             </div>
 
+            {/* Strava Integration */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Strava Integration</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Connect your Strava account to automatically sync activities
+                  </p>
+                </div>
+                {stravaConnected && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    Connected
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                {!stravaConnected ? (
+                  <button
+                    onClick={handleStravaConnect}
+                    disabled={stravaLoading}
+                    className="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-300 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                  >
+                    {stravaLoading ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Connecting...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
+                        </svg>
+                        Connect to Strava
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleStravaSync}
+                      disabled={stravaSyncing}
+                      className="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-300 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                    >
+                      {stravaSyncing ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Syncing...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          Sync Activities
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={handleStravaDisconnect}
+                      className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg font-medium transition-colors"
+                    >
+                      Disconnect
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {stravaConnected && (
+                <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                  <p className="text-sm text-orange-800">
+                    <strong>Tip:</strong> Click "Sync Activities" to fetch your latest Strava activities from the past 30 days.
+                  </p>
+                </div>
+              )}
+            </div>
+
             {/* Activity Management */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Manage Activities</h2>
@@ -156,10 +325,16 @@ export default function AdminPage() {
                               px-2 py-0.5 text-xs rounded-full
                               ${activity.source === 'garmin'
                                 ? 'bg-blue-100 text-blue-700'
+                                : activity.source === 'strava'
+                                ? 'bg-orange-100 text-orange-700'
                                 : 'bg-purple-100 text-purple-700'
                               }
                             `}>
-                              {activity.source === 'garmin' ? 'Garmin' : 'GPX Upload'}
+                              {activity.source === 'garmin'
+                                ? 'Garmin'
+                                : activity.source === 'strava'
+                                ? 'Strava'
+                                : 'GPX Upload'}
                             </span>
                           </div>
 
