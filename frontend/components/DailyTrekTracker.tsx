@@ -20,7 +20,9 @@ export default function DailyTrekTracker() {
   const fetchTodayActivities = async () => {
     try {
       const today = new Date().toISOString().split('T')[0] // Format: YYYY-MM-DD
+      console.log('Fetching activities for date:', today)
       const activities = await api.getActivities(today, today)
+      console.log('Today\'s activities:', activities)
       setTodayActivities(activities)
       setLastUpdate(new Date())
     } catch (error) {

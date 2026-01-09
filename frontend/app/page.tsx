@@ -17,6 +17,7 @@ export default function Home() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [mapKey, setMapKey] = useState(0)
+  const [dailyTrackerKey, setDailyTrackerKey] = useState(0)
 
   const fetchStats = async () => {
     try {
@@ -41,6 +42,8 @@ export default function Home() {
     fetchStats()
     // Force map to reload by changing key
     setMapKey(prev => prev + 1)
+    // Force daily tracker to reload
+    setDailyTrackerKey(prev => prev + 1)
   }
 
   return (
@@ -56,7 +59,7 @@ export default function Home() {
         </div>
 
         <aside className="lg:w-96 bg-white p-6 shadow-lg overflow-y-auto space-y-6">
-          <DailyTrekTracker />
+          <DailyTrekTracker key={dailyTrackerKey} />
 
           <div>
             <h2 className="text-xl font-semibold mb-4">Overall Progress</h2>
