@@ -10,3 +10,4 @@ python-multipart>=0.0.6
 polyline>=2.0.0
 requests>=2.31.0
 gpxpy>=1.6.2
+slowapi>=0.1.9

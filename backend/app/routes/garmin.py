@@ -2,13 +2,16 @@
 Garmin Connect API routes
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from app.database import get_db
 from app.services.garmin_sync import garmin_service
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
+limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
 
 
@@ -24,7 +27,8 @@ class StatusResponse(BaseModel):
 
 
 @router.post("/sync", response_model=SyncResponse)
-async def sync_garmin(db: Session = Depends(get_db)):
+@limiter.limit("10/hour")  # Limit to 10 syncs per hour to prevent API abuse
+async def sync_garmin(request: Request, db: Session = Depends(get_db)):
     """
     Manually trigger a sync with Garmin Connect
     Fetches activities from the last 30 days
@@ -47,7 +51,8 @@ async def sync_garmin(db: Session = Depends(get_db)):
 
 
 @router.get("/status", response_model=StatusResponse)
-async def get_status():
+@limiter.limit("30/minute")  # Allow checking status frequently but not excessively
+async def get_status(request: Request):
     """Get Garmin sync status"""
     return StatusResponse(
         authenticated=garmin_service.authenticated,
