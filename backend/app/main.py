@@ -1,17 +1,33 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from app.config import get_settings
+import os
 
 settings = get_settings()
 
 app = FastAPI(title=settings.app_name, debug=settings.debug)
 
-# CORS middleware for frontend
+# GZip compression middleware - compress responses to save bandwidth (free tier optimization)
+# Compresses responses larger than 1KB, typically saves 70%+ bandwidth on JSON responses
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# CORS middleware for frontend - restrict to specific domains for security
+# and to prevent unauthorized usage that could exceed free tier limits
+origins = [
+    "http://localhost:3000",  # Local development
+    "http://localhost:3001",  # Alternative local port
+]
+
+# Add production frontend URL if set in environment
+if frontend_url := os.getenv("FRONTEND_URL"):
+    origins.append(frontend_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your Vercel domain
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST"],  # Only allow needed methods
     allow_headers=["*"],
 )
 
