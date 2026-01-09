@@ -6,7 +6,7 @@ import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'rec
 interface GPSPoint {
   lat: number
   lon: number
-  ele: number
+  elevation: number
   time?: string
 }
 
@@ -21,9 +21,6 @@ export default function ElevationProfile({ gpsData }: ElevationProfileProps) {
   // Process GPS data to create elevation profile with cumulative distance
   const chartData = useMemo(() => {
     if (!gpsData || gpsData.length === 0) return []
-
-    // Debug: Check structure of first GPS point
-    console.log('GPS data sample:', gpsData[0])
 
     let cumulativeDistance = 0
     const data = []
@@ -48,7 +45,7 @@ export default function ElevationProfile({ gpsData }: ElevationProfileProps) {
 
       data.push({
         distance: parseFloat(cumulativeDistance.toFixed(2)),
-        elevation: Math.round(point.ele),
+        elevation: Math.round(point.elevation),
       })
     }
 

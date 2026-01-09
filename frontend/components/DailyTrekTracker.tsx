@@ -12,7 +12,7 @@ interface Activity {
   distance_km: number | null
   elevation_gain_m: number | null
   duration_seconds: number | null
-  raw_gps_data: Array<{ lat: number; lon: number; ele: number; time?: string }> | null
+  raw_gps_data: Array<{ lat: number; lon: number; elevation: number; time?: string }> | null
 }
 
 export default function DailyTrekTracker() {
