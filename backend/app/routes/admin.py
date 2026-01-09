@@ -21,10 +21,12 @@ class PasswordVerifyRequest(BaseModel):
 
 
 @router.post("/init-db")
+@router.get("/init-db")
 async def initialize_database():
     """
     Initialize database tables
     This should only be called once when deploying to a new environment
+    Supports both GET and POST for easy browser access
     """
     try:
         Base.metadata.create_all(bind=engine)
