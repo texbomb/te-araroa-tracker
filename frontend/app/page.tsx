@@ -32,8 +32,8 @@ export default function Home() {
 
   useEffect(() => {
     fetchStats()
-    // Refresh stats every 30 seconds
-    const interval = setInterval(fetchStats, 30000)
+    // Refresh stats every 5 minutes (optimized for free tier)
+    const interval = setInterval(fetchStats, 300000)
     return () => clearInterval(interval)
   }, [])
 
