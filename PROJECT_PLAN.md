@@ -175,7 +175,6 @@ nz-walk/
 │   │   │   └── Journal/
 │   │   │       └── JournalEntry.tsx       # Small journal display
 │   │   ├── lib/
-│   │   │   ├── supabase.ts     # Supabase client
 │   │   │   ├── mapbox.ts       # Mapbox utilities
 │   │   │   └── api.ts          # API client for backend
 │   │   ├── hooks/

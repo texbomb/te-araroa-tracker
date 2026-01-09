@@ -16,7 +16,7 @@ if not DATABASE_URL:
     DATABASE_URL = "sqlite:///./test.db"
 
 # Configure connection pooling for PostgreSQL (free tier optimization)
-# Railway/Supabase allow 60 concurrent connections - we limit to 5 for efficiency
+# Railway PostgreSQL allows 60 concurrent connections - we limit to 5 for efficiency
 if DATABASE_URL.startswith("postgresql"):
     engine = create_engine(
         DATABASE_URL,
