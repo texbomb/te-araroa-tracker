@@ -18,14 +18,11 @@ A web application to track and visualize your one-month walk on the Te Araroa tr
 
 ### Backend
 - **Framework:** Python FastAPI
-- **Hosting:** Fly.io (free tier: 3 shared VMs, 256MB RAM)
+- **Hosting:** Railway (free tier: 512MB RAM, $5 credit/month)
+- **Database:** Railway PostgreSQL (free tier: 1GB storage)
 - **Garmin Integration:** `garminconnect` Python library
 - **Scheduled Tasks:** APScheduler (cron jobs for auto-sync)
-
-### Database
-- **Service:** Supabase PostgreSQL (free tier: 500MB)
-- **ORM:** SQLAlchemy (Python side)
-- **Client:** Supabase JS client (Next.js side)
+- **ORM:** SQLAlchemy
 
 ### Storage
 - **Photos:** Cloudinary (free tier: 25GB storage, 25GB bandwidth/month)
@@ -259,8 +256,8 @@ nz-walk/
 - **Waypoints** (markers for towns/huts)
 
 **Data Flow:**
-1. Frontend fetches `planned_route` from Supabase (static, loaded once)
-2. Fetches `activities` with `route_polyline` (updates every 6 hours)
+1. Frontend fetches `planned_route` from backend API (static, loaded once)
+2. Fetches `activities` with `route_polyline` (updates every 5 minutes)
 3. Draws completed route from concatenated polylines
 4. Places marker at last GPS point
 5. Renders photo markers from `photos` table
@@ -347,44 +344,30 @@ nz-walk/
 
 ## Deployment Strategy
 
-### 1. Supabase Setup
+### 1. Railway Setup (Backend + Database)
 **Steps:**
-1. Create free Supabase project
-2. Run SQL schema from database section
-3. Copy connection string to both frontend & backend `.env`
-4. Set up Row Level Security (RLS) policies:
-   - Public read access to all tables
-   - No public write access (backend only)
-
-**Environment Variables:**
-```
-SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_ANON_KEY=xxx
-SUPABASE_SERVICE_KEY=xxx  # Backend only
-```
-
-### 2. Backend (Fly.io)
-**Steps:**
-1. Install Fly CLI: `brew install flyctl` (Mac) or download
-2. Login: `flyctl auth login`
-3. Initialize app: `flyctl launch` (in `backend/` directory)
-4. Set secrets:
+1. Sign up at [railway.app](https://railway.app)
+2. Create new project
+3. Add PostgreSQL service (automatically provisions database)
+4. Add backend service from GitHub repo
+5. Set environment variables:
    ```bash
-   flyctl secrets set GARMIN_EMAIL=your@email.com
-   flyctl secrets set GARMIN_PASSWORD=yourpassword
-   flyctl secrets set SUPABASE_URL=xxx
-   flyctl secrets set SUPABASE_SERVICE_KEY=xxx
-   flyctl secrets set CLOUDINARY_URL=xxx
-   flyctl secrets set ADMIN_PASSWORD=xxx
+   GARMIN_EMAIL=your@email.com
+   GARMIN_PASSWORD=yourpassword
+   CLOUDINARY_CLOUD_NAME=xxx
+   CLOUDINARY_API_KEY=xxx
+   CLOUDINARY_API_SECRET=xxx
+   ADMIN_PASSWORD=xxx
    ```
-5. Deploy: `flyctl deploy`
+6. Railway automatically sets `DATABASE_URL` from PostgreSQL service
+7. Deploy (automatic on git push)
 
 **Scheduled Sync:**
 - APScheduler runs inside the app
 - Cron job: Every 6 hours, call `garmin_sync.sync_activities()`
-- Logs to stdout (visible in `flyctl logs`)
+- View logs in Railway dashboard
 
-**Cost:** Free tier (3 shared-cpu-1x VMs, 256MB each)
+**Cost:** Free tier ($5 credit/month, 512MB RAM, 1GB database)
 
 ### 3. Cloudinary Setup
 **Steps:**
@@ -397,17 +380,15 @@ SUPABASE_SERVICE_KEY=xxx  # Backend only
    CLOUDINARY_API_SECRET=xxx
    ```
 
-### 4. Frontend (Vercel)
+### 3. Frontend (Vercel)
 **Steps:**
 1. Push code to GitHub
 2. Import project in Vercel
 3. Set root directory to `frontend/`
 4. Add environment variables:
    ```
-   NEXT_PUBLIC_SUPABASE_URL=xxx
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=xxx
    NEXT_PUBLIC_MAPBOX_TOKEN=xxx
-   NEXT_PUBLIC_BACKEND_URL=https://your-app.fly.dev
+   NEXT_PUBLIC_BACKEND_URL=https://your-app.railway.app
    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=xxx
    ```
 5. Deploy (automatic on git push)
@@ -420,7 +401,7 @@ SUPABASE_SERVICE_KEY=xxx  # Backend only
 
 **Cost:** Free tier (100GB bandwidth, unlimited sites)
 
-### 5. Mapbox Setup
+### 4. Mapbox Setup
 **Steps:**
 1. Sign up at mapbox.com (free)
 2. Create access token
@@ -438,14 +419,13 @@ SUPABASE_SERVICE_KEY=xxx  # Backend only
 ### Phase 1: Setup & Infrastructure (Days 1-3)
 **Backend:**
 - [ ] Initialize FastAPI project structure
-- [ ] Set up Supabase database & run schema
+- [ ] Set up Railway PostgreSQL database & run schema
 - [ ] Configure database connection (SQLAlchemy)
 - [ ] Test Garmin authentication with `garminconnect` library
-- [ ] Deploy skeleton backend to Fly.io
+- [ ] Deploy skeleton backend to Railway
 
 **Frontend:**
 - [ ] Initialize Next.js project with TypeScript & Tailwind
-- [ ] Set up Supabase client
 - [ ] Configure Mapbox GL JS
 - [ ] Basic map rendering with South Island view
 
@@ -555,12 +535,13 @@ SUPABASE_SERVICE_KEY=xxx  # Backend only
   - [ ] Upload test activity to Garmin
   - [ ] Verify auto-sync works
   - [ ] Test manual sync button
-  - [ ] Upload photos from phone
+  - [ ] Upload photos from phone or GPX files
   - [ ] Check map rendering on mobile
 - [ ] Performance optimization
   - [ ] Lazy load map components
   - [ ] Optimize image sizes (Cloudinary transformations)
   - [ ] Add loading states
+  - [ ] Add rate limiting and caching
 - [ ] Error handling
   - [ ] Garmin auth failures
   - [ ] Network errors
@@ -624,25 +605,20 @@ SUPABASE_SERVICE_KEY=xxx  # Backend only
 
 ### Frontend (`.env.local`)
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 NEXT_PUBLIC_MAPBOX_TOKEN=pk.xxx
-NEXT_PUBLIC_BACKEND_URL=https://your-app.fly.dev
+NEXT_PUBLIC_BACKEND_URL=https://your-app.railway.app
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your-cloud-name
-ADMIN_PASSWORD=your-simple-password  # For /admin access
 ```
 
-### Backend (`.env` / Fly.io Secrets)
+### Backend (`.env` / Railway Variables)
 ```bash
-SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_SERVICE_KEY=your-service-key
 GARMIN_EMAIL=your@email.com
 GARMIN_PASSWORD=your-garmin-password
 CLOUDINARY_CLOUD_NAME=your-cloud-name
 CLOUDINARY_API_KEY=your-api-key
 CLOUDINARY_API_SECRET=your-api-secret
-ADMIN_PASSWORD=your-simple-password  # Match frontend
-DATABASE_URL=postgresql://...  # Auto-set by Fly.io if using Postgres addon
+ADMIN_PASSWORD=your-simple-password
+# DATABASE_URL is automatically set by Railway when you add PostgreSQL service
 ```
 
 ---
@@ -712,8 +688,8 @@ The site remains a permanent record of your adventure with zero ongoing cost.
 ## Next Steps
 
 1. **Review this plan** - Any questions or changes?
-2. **Set up accounts** - Supabase, Fly.io, Cloudinary, Mapbox
+2. **Set up accounts** - Railway, Cloudinary, Mapbox
 3. **Start Phase 1** - Initialize project structure
 4. **Test Garmin auth** - Verify you can connect before building everything
 
-Let me know when you're ready to start building!
+See SETUP.md for detailed setup instructions!
