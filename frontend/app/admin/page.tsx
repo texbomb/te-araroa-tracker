@@ -1,0 +1,237 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import AdminAuth from '@/components/AdminAuth'
+import UploadGPX from '@/components/UploadGPX'
+import { api } from '@/lib/api'
+
+interface Activity {
+  id: number
+  name: string | null
+  date: string
+  distance_km: number
+  elevation_gain_m: number
+  duration_seconds: number
+  source: string
+}
+
+export default function AdminPage() {
+  const router = useRouter()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [activities, setActivities] = useState<Activity[]>([])
+  const [loading, setLoading] = useState(true)
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
+
+  const fetchActivities = async () => {
+    try {
+      setLoading(true)
+      const data = await api.getActivities()
+      // Sort by date descending (newest first)
+      const sorted = data.sort((a: Activity, b: Activity) =>
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      )
+      setActivities(sorted)
+    } catch (error) {
+      console.error('Failed to fetch activities:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAuthenticated = () => {
+    setIsAuthenticated(true)
+    fetchActivities()
+  }
+
+  const handleUploadComplete = () => {
+    fetchActivities()
+  }
+
+  const handleDeleteClick = (activityId: number) => {
+    setDeleteConfirm(activityId)
+  }
+
+  const handleDeleteConfirm = async (activityId: number) => {
+    try {
+      // TODO: Implement delete endpoint
+      await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/activities/${activityId}`, {
+        method: 'DELETE'
+      })
+
+      // Refresh list
+      fetchActivities()
+      setDeleteConfirm(null)
+    } catch (error) {
+      console.error('Failed to delete activity:', error)
+      alert('Failed to delete activity')
+    }
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-NZ', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    })
+  }
+
+  const formatDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700 text-white shadow-xl">
+        <div className="max-w-6xl mx-auto px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
+              <p className="text-purple-100 mt-1 font-light">Manage your Te Araroa trek data</p>
+            </div>
+            <button
+              onClick={() => router.push('/')}
+              className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-sm font-medium"
+            >
+              ← Back to Tracker
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-6 py-8">
+        {/* Authentication */}
+        {!isAuthenticated ? (
+          <div className="max-w-md mx-auto mt-12">
+            <div className="bg-white rounded-lg shadow-lg p-8">
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4">
+                  <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900">Admin Access Required</h2>
+                <p className="text-gray-600 mt-2">Enter your password to access the admin dashboard</p>
+              </div>
+              <AdminAuth
+                isAuthenticated={isAuthenticated}
+                onAuthenticated={handleAuthenticated}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {/* Upload Section */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Upload Activity</h2>
+              <UploadGPX onUploadComplete={handleUploadComplete} />
+            </div>
+
+            {/* Activity Management */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Manage Activities</h2>
+
+              {loading ? (
+                <div className="text-center py-8 text-gray-500">Loading activities...</div>
+              ) : activities.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">No activities yet. Upload a GPX file to get started!</div>
+              ) : (
+                <div className="space-y-3">
+                  {activities.map((activity) => (
+                    <div
+                      key={activity.id}
+                      className="border border-gray-200 rounded-lg p-4 hover:border-purple-300 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="font-semibold text-gray-900">
+                              {activity.name || 'Unnamed Activity'}
+                            </h3>
+                            <span className={`
+                              px-2 py-0.5 text-xs rounded-full
+                              ${activity.source === 'garmin'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-purple-100 text-purple-700'
+                              }
+                            `}>
+                              {activity.source === 'garmin' ? 'Garmin' : 'GPX Upload'}
+                            </span>
+                          </div>
+
+                          <div className="text-sm text-gray-600">
+                            {formatDate(activity.date)}
+                          </div>
+
+                          <div className="flex gap-6 mt-2 text-sm">
+                            <div>
+                              <span className="text-gray-500">Distance:</span>{' '}
+                              <span className="font-medium text-gray-900">{activity.distance_km.toFixed(1)} km</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Elevation:</span>{' '}
+                              <span className="font-medium text-gray-900">{activity.elevation_gain_m}m</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Duration:</span>{' '}
+                              <span className="font-medium text-gray-900">{formatDuration(activity.duration_seconds)}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          {/* Edit button - placeholder for future */}
+                          <button
+                            className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                            title="Edit (coming soon)"
+                            disabled
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+
+                          {/* Delete button */}
+                          {deleteConfirm === activity.id ? (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleDeleteConfirm(activity.id)}
+                                className="px-3 py-1.5 text-sm bg-red-600 text-white hover:bg-red-700 rounded transition-colors"
+                              >
+                                Confirm
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirm(null)}
+                                className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleDeleteClick(activity.id)}
+                              className="px-3 py-1.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                              title="Delete activity"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}
