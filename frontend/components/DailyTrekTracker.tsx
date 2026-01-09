@@ -42,6 +42,8 @@ export default function DailyTrekTracker() {
       const hoursSinceActivity = (now.getTime() - activityDate.getTime()) / (1000 * 60 * 60)
 
       console.log('Most recent activity:', mostRecentActivity.name, 'from', mostRecentActivity.date)
+      console.log('Activity date parsed:', activityDate.toISOString())
+      console.log('Current time:', now.toISOString())
       console.log('Hours since activity:', hoursSinceActivity)
 
       // If activity was within last 36 hours, show it as "today's trek"

@@ -146,8 +146,8 @@ export default function MapView() {
             )
             .addTo(mapInstance)
 
-          // Add end marker for latest activity
-          if (index === activities.length - 1) {
+          // Add end marker for latest activity (first in array since sorted by date desc)
+          if (index === 0) {
             const endPoint = activity.raw_gps_data[activity.raw_gps_data.length - 1]
 
             // Create a custom current position marker element
