@@ -7,6 +7,7 @@ interface Activity {
   id: number
   name: string | null
   date: string
+  start_time: string | null
   distance_km: number | null
   elevation_gain_m: number | null
   duration_seconds: number | null
@@ -35,13 +36,15 @@ export default function DailyTrekTracker() {
       )
 
       const mostRecentActivity = sortedActivities[0]
-      const activityDate = new Date(mostRecentActivity.date)
+      // Use start_time if available (includes time), otherwise fall back to date
+      const activityTimestamp = mostRecentActivity.start_time || mostRecentActivity.date
+      const activityDate = new Date(activityTimestamp)
       const now = new Date()
 
-      // Calculate hours since the activity (accounting for timezone)
+      // Calculate hours since the activity
       const hoursSinceActivity = (now.getTime() - activityDate.getTime()) / (1000 * 60 * 60)
 
-      console.log('Most recent activity:', mostRecentActivity.name, 'from', mostRecentActivity.date)
+      console.log('Most recent activity:', mostRecentActivity.name, 'from', activityTimestamp)
       console.log('Activity date parsed:', activityDate.toISOString())
       console.log('Current time:', now.toISOString())
       console.log('Hours since activity:', hoursSinceActivity)

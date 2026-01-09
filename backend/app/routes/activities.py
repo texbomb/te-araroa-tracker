@@ -20,6 +20,7 @@ class ActivityResponse(BaseModel):
     source: str
     garmin_activity_id: Optional[int]
     date: date
+    start_time: Optional[str]  # ISO format datetime string with timezone
     distance_km: Optional[float]
     elevation_gain_m: Optional[int]
     elevation_loss_m: Optional[int]
