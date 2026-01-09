@@ -40,6 +40,42 @@ export default function MapView() {
     // Load activities and display them on the map
     mapInstance.on('load', async () => {
       try {
+        // Add Te Araroa Trail overlay (South Island)
+        // Trail data source: https://www.teararoa.org.nz/
+        // You can add the official trail GPX/GeoJSON to public folder and load it
+        try {
+          // Attempt to load trail data from public folder
+          const trailResponse = await fetch('/te-araroa-south-island.geojson')
+
+          if (trailResponse.ok) {
+            const trailData = await trailResponse.json()
+
+            mapInstance.addSource('te-araroa-trail', {
+              type: 'geojson',
+              data: trailData
+            })
+
+            mapInstance.addLayer({
+              id: 'te-araroa-trail-line',
+              type: 'line',
+              source: 'te-araroa-trail',
+              layout: {
+                'line-join': 'round',
+                'line-cap': 'round',
+              },
+              paint: {
+                'line-color': '#fb923c', // Orange color for the official trail
+                'line-width': 3,
+                'line-opacity': 0.6,
+                'line-dasharray': [2, 2] // Dashed line to distinguish from actual hiking routes
+              },
+            })
+            console.log('Te Araroa trail overlay loaded')
+          }
+        } catch (trailError) {
+          console.log('Te Araroa trail overlay not available - add te-araroa-south-island.geojson to public folder')
+        }
+
         const activities: Activity[] = await api.getActivities()
 
         if (activities.length === 0) {
@@ -113,13 +149,46 @@ export default function MapView() {
           // Add end marker for latest activity
           if (index === activities.length - 1) {
             const endPoint = activity.raw_gps_data[activity.raw_gps_data.length - 1]
-            new mapboxgl.Marker({ color: '#10b981' })
+
+            // Create a custom current position marker element
+            const currentLocationEl = document.createElement('div')
+            currentLocationEl.className = 'current-location-marker'
+            currentLocationEl.innerHTML = `
+              <div style="
+                width: 40px;
+                height: 40px;
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                border: 4px solid white;
+                border-radius: 50%;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+                animation: pulse 2s infinite;
+              ">
+                📍
+              </div>
+            `
+
+            // Add pulsing animation
+            const style = document.createElement('style')
+            style.textContent = `
+              @keyframes pulse {
+                0%, 100% { transform: scale(1); opacity: 1; }
+                50% { transform: scale(1.1); opacity: 0.9; }
+              }
+            `
+            document.head.appendChild(style)
+
+            new mapboxgl.Marker({ element: currentLocationEl })
               .setLngLat([endPoint.lon, endPoint.lat])
               .setPopup(
                 new mapboxgl.Popup({ offset: 25 }).setHTML(
-                  `<div>
-                    <h3 class="font-bold">Current Position</h3>
-                    <p class="text-sm">${activity.name}</p>
+                  `<div style="padding: 8px;">
+                    <h3 style="font-weight: bold; font-size: 16px; margin-bottom: 4px;">📍 Current Position</h3>
+                    <p style="font-size: 14px; color: #666;">${activity.name}</p>
+                    <p style="font-size: 12px; color: #999; margin-top: 4px;">${new Date(activity.date).toLocaleDateString()}</p>
                   </div>`
                 )
               )
