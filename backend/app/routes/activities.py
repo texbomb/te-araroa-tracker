@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional
-from datetime import date
+from datetime import date, datetime
 from app.database import get_db
 from app.models.activity import Activity
 from pydantic import BaseModel
@@ -20,7 +20,7 @@ class ActivityResponse(BaseModel):
     source: str
     garmin_activity_id: Optional[int]
     date: date
-    start_time: Optional[str]  # ISO format datetime string with timezone
+    start_time: Optional[datetime]  # DateTime with timezone
     distance_km: Optional[float]
     elevation_gain_m: Optional[int]
     elevation_loss_m: Optional[int]
@@ -35,6 +35,9 @@ class ActivityResponse(BaseModel):
 
     class Config:
         from_attributes = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat() if v else None
+        }
 
 
 class StatsResponse(BaseModel):
