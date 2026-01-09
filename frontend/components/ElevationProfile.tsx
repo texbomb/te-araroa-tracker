@@ -22,6 +22,9 @@ export default function ElevationProfile({ gpsData }: ElevationProfileProps) {
   const chartData = useMemo(() => {
     if (!gpsData || gpsData.length === 0) return []
 
+    // Debug: Check structure of first GPS point
+    console.log('GPS data sample:', gpsData[0])
+
     let cumulativeDistance = 0
     const data = []
 
