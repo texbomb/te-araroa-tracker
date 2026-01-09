@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
+import ElevationProfile from './ElevationProfile'
 
 interface Activity {
   id: number
@@ -11,6 +12,7 @@ interface Activity {
   distance_km: number | null
   elevation_gain_m: number | null
   duration_seconds: number | null
+  raw_gps_data: Array<{ lat: number; lon: number; ele: number; time?: string }> | null
 }
 
 export default function DailyTrekTracker() {
@@ -139,6 +141,13 @@ export default function DailyTrekTracker() {
               <p className="text-xs text-gray-500">{formatDuration(totalDuration).split(' ')[1] || ''}</p>
             </div>
           </div>
+
+          {/* Elevation Profile */}
+          {todayActivities[0]?.raw_gps_data && todayActivities[0].raw_gps_data.length > 0 && (
+            <div className="bg-white/70 p-4 rounded-lg">
+              <ElevationProfile gpsData={todayActivities[0].raw_gps_data} />
+            </div>
+          )}
 
           {todayActivities.length > 1 && (
             <div className="mt-4 pt-4 border-t border-emerald-200">
