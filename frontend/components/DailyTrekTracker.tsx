@@ -19,11 +19,39 @@ export default function DailyTrekTracker() {
 
   const fetchTodayActivities = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0] // Format: YYYY-MM-DD
-      console.log('Fetching activities for date:', today)
-      const activities = await api.getActivities(today, today)
-      console.log('Today\'s activities:', activities)
-      setTodayActivities(activities)
+      // Get all activities and find the most recent one
+      const allActivities = await api.getActivities()
+
+      if (allActivities.length === 0) {
+        setTodayActivities([])
+        setLastUpdate(new Date())
+        setLoading(false)
+        return
+      }
+
+      // Sort by date descending to get most recent
+      const sortedActivities = allActivities.sort((a: Activity, b: Activity) =>
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      )
+
+      const mostRecentActivity = sortedActivities[0]
+      const activityDate = new Date(mostRecentActivity.date)
+      const now = new Date()
+
+      // Calculate hours since the activity (accounting for timezone)
+      const hoursSinceActivity = (now.getTime() - activityDate.getTime()) / (1000 * 60 * 60)
+
+      console.log('Most recent activity:', mostRecentActivity.name, 'from', mostRecentActivity.date)
+      console.log('Hours since activity:', hoursSinceActivity)
+
+      // If activity was within last 36 hours, show it as "today's trek"
+      // (36 hours accounts for timezone differences and late uploads)
+      if (hoursSinceActivity <= 36) {
+        setTodayActivities([mostRecentActivity])
+      } else {
+        setTodayActivities([])
+      }
+
       setLastUpdate(new Date())
     } catch (error) {
       console.error('Failed to fetch today\'s activities:', error)
