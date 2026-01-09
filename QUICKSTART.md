@@ -2,29 +2,25 @@
 
 Fast track guide to get the Te Araroa Tracker running locally.
 
-## Step 1: Create Free Accounts (5 mins)
+## Step 1: Create Free Accounts (3 mins)
 
 Do these in parallel in different browser tabs:
 
-1. **Supabase** → [supabase.com](https://supabase.com)
-   - Sign up → New Project
-   - Save: Project URL, anon key, service_role key
-
-2. **Mapbox** → [mapbox.com](https://mapbox.com)
+1. **Mapbox** → [mapbox.com](https://mapbox.com)
    - Sign up → Copy default access token
 
-3. **Cloudinary** → [cloudinary.com](https://cloudinary.com)
+2. **Cloudinary** → [cloudinary.com](https://cloudinary.com)
    - Sign up → Dashboard
    - Save: Cloud Name, API Key, API Secret
 
 ## Step 2: Setup Database (2 mins)
 
-1. Go to your Supabase project
-2. Click **SQL Editor** in sidebar
-3. Click **New Query**
-4. Copy entire contents of `backend/schema.sql`
-5. Paste and click **Run**
-6. Done! All tables created
+For local development, the app will use SQLite automatically (no setup needed).
+
+For production:
+1. Sign up at [railway.app](https://railway.app)
+2. Create new project → Add PostgreSQL
+3. Copy the DATABASE_URL from Railway dashboard
 
 ## Step 3: Backend Setup (3 mins)
 
@@ -49,8 +45,9 @@ nano .env     # Mac/Linux
 
 Fill in `.env`:
 ```bash
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_KEY=your-service-role-key
+# Leave DATABASE_URL commented for local dev (uses SQLite)
+# DATABASE_URL=postgresql://...  # Only needed for production
+
 GARMIN_EMAIL=your@email.com
 GARMIN_PASSWORD=yourpassword
 CLOUDINARY_CLOUD_NAME=yourcloudname
@@ -91,12 +88,9 @@ nano .env.local     # Mac/Linux
 
 Fill in `.env.local`:
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 NEXT_PUBLIC_MAPBOX_TOKEN=pk.yourtoken
 NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=yourcloudname
-ADMIN_PASSWORD=hiking2026
 ```
 
 Start frontend:

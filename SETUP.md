@@ -13,26 +13,7 @@ Quick start guide to get your trail tracker up and running.
 
 ## Phase 1: Account Setup (Do this first!)
 
-### 1. Supabase (Database)
-
-1. Go to [supabase.com](https://supabase.com)
-2. Sign up for free account
-3. Click "New Project"
-   - Name: `te-araroa-tracker`
-   - Database password: Choose a strong password
-   - Region: Choose closest to New Zealand
-4. Wait for project to provision (~2 minutes)
-5. Go to **SQL Editor** in left sidebar
-6. Click "New Query"
-7. Copy and paste entire contents of `backend/schema.sql`
-8. Click "Run" to create all tables
-9. Go to **Project Settings** → **API**
-10. Copy these values (you'll need them):
-    - Project URL (looks like `https://xxx.supabase.co`)
-    - `anon` key (for frontend)
-    - `service_role` key (for backend - keep this secret!)
-
-### 2. Mapbox (Maps)
+### 1. Mapbox (Maps)
 
 1. Go to [mapbox.com](https://mapbox.com)
 2. Sign up for free account
@@ -40,7 +21,7 @@ Quick start guide to get your trail tracker up and running.
 4. Copy your default public token (starts with `pk.`)
 5. That's it!
 
-### 3. Cloudinary (Photo Storage)
+### 2. Cloudinary (Photo Storage)
 
 1. Go to [cloudinary.com](https://cloudinary.com)
 2. Sign up for free account
@@ -51,9 +32,9 @@ Quick start guide to get your trail tracker up and running.
    - API Secret
 5. Done!
 
-### 4. Fly.io (Backend Hosting) - Optional for now
+### 3. Railway (Production Deployment) - Optional for now
 
-You can set this up later when ready to deploy. For local development, skip this.
+You can set this up later when ready to deploy. For local development, the app will use SQLite automatically (no setup needed).
 
 ---
 
@@ -88,8 +69,9 @@ cp .env.example .env
 Fill in your `.env` file:
 
 ```bash
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_KEY=your-service-role-key-here
+# Leave DATABASE_URL commented for local dev (uses SQLite)
+# DATABASE_URL=postgresql://...  # Railway sets this automatically in production
+
 GARMIN_EMAIL=your-garmin-email@example.com
 GARMIN_PASSWORD=your-garmin-password
 CLOUDINARY_CLOUD_NAME=your-cloud-name
@@ -138,14 +120,7 @@ cd frontend
 npm install
 ```
 
-### 2. Install Additional Dependencies
-
-```bash
-npm install @supabase/supabase-js mapbox-gl
-npm install -D @types/mapbox-gl
-```
-
-### 3. Configure Environment Variables
+### 2. Configure Environment Variables
 
 ```bash
 # Copy example file
@@ -159,15 +134,12 @@ cp .env.local.example .env.local
 Fill in your `.env.local`:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
 NEXT_PUBLIC_MAPBOX_TOKEN=pk.your-mapbox-token
 NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your-cloud-name
-ADMIN_PASSWORD=same-password-as-backend
 ```
 
-### 4. Run Frontend Server
+### 3. Run Frontend Server
 
 ```bash
 npm run dev
@@ -183,7 +155,7 @@ Open browser to `http://localhost:3000` - you should see the Next.js app!
 
 - [ ] Backend running on `http://localhost:8000`
 - [ ] Frontend running on `http://localhost:3000`
-- [ ] Supabase database has all 5 tables (check SQL Editor)
+- [ ] SQLite database created automatically (test.db in backend folder)
 - [ ] Garmin test script passes
 - [ ] No errors in terminal logs
 
@@ -213,9 +185,9 @@ npm run dev
 - Make sure virtual environment is activated
 - Run `pip install -r requirements.txt` again
 
-**"Cannot connect to Supabase":**
-- Check your `SUPABASE_URL` doesn't have trailing slash
-- Verify you're using the correct keys (anon for frontend, service_role for backend)
+**"Database connection failed":**
+- For local dev, check that backend directory is writable (for SQLite)
+- For production, verify DATABASE_URL is correctly set by Railway
 
 **Garmin authentication fails:**
 - Log into Garmin Connect website manually to check password
@@ -231,10 +203,9 @@ npm run dev
 
 Once everything is running:
 
-1. ✅ Phase 1 complete - Infrastructure is ready!
-2. → Move to Phase 2 - Build Garmin sync functionality
-3. → Test with real activity data
-4. → Add map visualization
-5. → Deploy to production
+1. ✅ Setup complete - Infrastructure is ready!
+2. → Test GPX upload functionality
+3. → Upload activities and view on map
+4. → When ready, deploy to Railway + Vercel
 
-Good luck with the build! 🚀
+Good luck! 🚀

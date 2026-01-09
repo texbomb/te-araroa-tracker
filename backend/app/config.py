@@ -4,10 +4,6 @@ from typing import Optional
 
 
 class Settings(BaseSettings):
-    # Supabase (optional - not currently used)
-    supabase_url: Optional[str] = None
-    supabase_service_key: Optional[str] = None
-
     # Garmin (optional - only needed for auto-sync)
     garmin_email: Optional[str] = None
     garmin_password: Optional[str] = None

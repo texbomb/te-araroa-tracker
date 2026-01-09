@@ -7,19 +7,16 @@ import os
 
 settings = get_settings()
 
-# Use DATABASE_URL if set, otherwise construct from Supabase URL
-# For now, we'll use Supabase's REST API via the service, not direct PostgreSQL
-# DATABASE_URL will be set when deploying or can be manually configured
+# Use DATABASE_URL from environment (automatically set by Railway)
+# For local development, falls back to SQLite
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
-    # Extract project ref from Supabase URL for PostgreSQL connection
-    # Format: postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres
-    # For local dev, we'll skip database for now since we're using Supabase's REST API
-    DATABASE_URL = "sqlite:///./test.db"  # Fallback for local development
+    # Local development fallback
+    DATABASE_URL = "sqlite:///./test.db"
 
 # Configure connection pooling for PostgreSQL (free tier optimization)
-# Supabase free tier allows 60 concurrent connections - we limit to 5 to leave headroom
+# Railway PostgreSQL allows 60 concurrent connections - we limit to 5 for efficiency
 if DATABASE_URL.startswith("postgresql"):
     engine = create_engine(
         DATABASE_URL,
