@@ -7,9 +7,10 @@ class Activity(Base):
     __tablename__ = "activities"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255))  # Activity name from GPX or Garmin
-    source = Column(String(50), nullable=False, default="garmin")  # "garmin" or "gpx_upload"
+    name = Column(String(255))  # Activity name from GPX, Garmin, or Strava
+    source = Column(String(50), nullable=False, default="garmin")  # "garmin", "gpx_upload", or "strava"
     garmin_activity_id = Column(BigInteger, unique=True, nullable=True, index=True)  # Nullable for manual uploads
+    strava_activity_id = Column(BigInteger, unique=True, nullable=True, index=True)  # Nullable for non-Strava sources
     date = Column(Date, nullable=False, index=True)
     start_time = Column(DateTime(timezone=True))
     end_time = Column(DateTime(timezone=True))
