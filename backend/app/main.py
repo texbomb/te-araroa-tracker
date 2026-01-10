@@ -28,8 +28,12 @@ origins = [
 ]
 
 # Add production frontend URL if set in environment
+# Strip trailing slash to ensure exact origin match for CORS
 if frontend_url := os.getenv("FRONTEND_URL"):
-    origins.append(frontend_url)
+    origins.append(frontend_url.rstrip("/"))
+
+# Log allowed origins for debugging
+print(f"CORS allowed origins: {origins}")
 
 app.add_middleware(
     CORSMiddleware,
