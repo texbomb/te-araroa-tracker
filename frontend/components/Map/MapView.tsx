@@ -102,7 +102,11 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
           }
 
           // Convert GPS data to GeoJSON
-          const coordinates = activity.raw_gps_data.map(point => [point.lon, point.lat])
+          // Handle both 'lon' and 'lng' for backwards compatibility
+          const coordinates = activity.raw_gps_data.map((point: any) => [
+            point.lon ?? point.lng,
+            point.lat
+          ])
 
           // Add to bounds
           coordinates.forEach(coord => bounds.extend(coord as [number, number]))
@@ -284,8 +288,9 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
       const selectedActivity = activities.find(a => a.id === selectedActivityId)
       if (selectedActivity && selectedActivity.raw_gps_data.length > 0) {
         const bounds = new mapboxgl.LngLatBounds()
-        selectedActivity.raw_gps_data.forEach(point => {
-          bounds.extend([point.lon, point.lat])
+        selectedActivity.raw_gps_data.forEach((point: any) => {
+          // Handle both 'lon' and 'lng' for backwards compatibility
+          bounds.extend([point.lon ?? point.lng, point.lat])
         })
         mapInstance.fitBounds(bounds, {
           padding: 50,
