@@ -62,6 +62,50 @@ async def database_status():
         }
 
 
+@router.post("/migrate-db")
+@router.get("/migrate-db")
+async def migrate_database():
+    """
+    Add missing columns to existing tables
+    Safe to run multiple times - checks if columns exist first
+    """
+    try:
+        from sqlalchemy import text, inspect
+
+        results = []
+        inspector = inspect(engine)
+
+        # Check if activities table exists
+        if "activities" not in inspector.get_table_names():
+            results.append({"table": "activities", "status": "Table does not exist, run /init-db first"})
+            return {"success": False, "results": results}
+
+        # Get existing columns in activities table
+        existing_columns = [col["name"] for col in inspector.get_columns("activities")]
+
+        # Add strava_activity_id column if it doesn't exist
+        if "strava_activity_id" not in existing_columns:
+            with engine.connect() as conn:
+                conn.execute(text(
+                    "ALTER TABLE activities ADD COLUMN strava_activity_id BIGINT UNIQUE"
+                ))
+                conn.commit()
+            results.append({"column": "strava_activity_id", "status": "added"})
+        else:
+            results.append({"column": "strava_activity_id", "status": "already exists"})
+
+        return {
+            "success": True,
+            "message": "Database migration completed",
+            "results": results
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Migration failed: {str(e)}"
+        )
+
+
 @router.post("/verify")
 @limiter.limit("3/15minute")  # Only 3 attempts per 15 minutes to prevent brute force
 async def verify_admin_password(request: Request, data: PasswordVerifyRequest):
