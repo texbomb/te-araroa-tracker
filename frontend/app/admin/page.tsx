@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import AdminAuth from '@/components/AdminAuth'
 import UploadGPX from '@/components/UploadGPX'
 import { api } from '@/lib/api'
@@ -18,6 +18,7 @@ interface Activity {
 
 export default function AdminPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
@@ -25,6 +26,24 @@ export default function AdminPage() {
   const [stravaConnected, setStravaConnected] = useState(false)
   const [stravaLoading, setStravaLoading] = useState(false)
   const [stravaSyncing, setStravaSyncing] = useState(false)
+
+  // Handle OAuth callback from Strava
+  useEffect(() => {
+    const stravaConnectedParam = searchParams.get('strava_connected')
+    const stravaError = searchParams.get('strava_error')
+    const athleteName = searchParams.get('athlete_name')
+
+    if (stravaConnectedParam === 'true') {
+      setStravaConnected(true)
+      alert(`Successfully connected to Strava! Welcome ${athleteName || ''}!`)
+      // Clean up URL
+      router.replace('/admin')
+    } else if (stravaError) {
+      alert(`Failed to connect to Strava: ${stravaError}`)
+      // Clean up URL
+      router.replace('/admin')
+    }
+  }, [searchParams, router])
 
   const fetchActivities = async () => {
     try {
@@ -62,17 +81,15 @@ export default function AdminPage() {
     try {
       setStravaLoading(true)
 
-      // Use full page redirect instead of popup for better UX
-      const redirectUri = `${window.location.origin}/admin/strava-callback`
+      // Use backend callback for better security - tokens never touch frontend
+      const redirectUri = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/strava/callback`
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/strava/auth/authorize?redirect_uri=${encodeURIComponent(redirectUri)}`
       )
       const data = await response.json()
 
-      // Store that we're attempting to connect
-      localStorage.setItem('strava_connecting', 'true')
-
       // Redirect to Strava authorization page
+      // Backend will handle the callback and redirect back to /admin with status
       window.location.href = data.authorization_url
     } catch (error) {
       console.error('Failed to connect to Strava:', error)
