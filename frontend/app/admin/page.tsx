@@ -61,30 +61,19 @@ export default function AdminPage() {
   const handleStravaConnect = async () => {
     try {
       setStravaLoading(true)
-      const redirectUri = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/strava/callback`
+
+      // Use full page redirect instead of popup for better UX
+      const redirectUri = `${window.location.origin}/admin/strava-callback`
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/strava/auth/authorize?redirect_uri=${encodeURIComponent(redirectUri)}`
       )
       const data = await response.json()
 
-      // Open Strava authorization in new window
-      window.open(data.authorization_url, '_blank', 'width=600,height=700')
+      // Store that we're attempting to connect
+      localStorage.setItem('strava_connecting', 'true')
 
-      // Poll for connection status
-      const pollInterval = setInterval(async () => {
-        const statusResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/strava/auth/status`)
-        const statusData = await statusResponse.json()
-
-        if (statusData.connected) {
-          clearInterval(pollInterval)
-          setStravaConnected(true)
-          setStravaLoading(false)
-          alert('Successfully connected to Strava!')
-        }
-      }, 2000)
-
-      // Stop polling after 2 minutes
-      setTimeout(() => clearInterval(pollInterval), 120000)
+      // Redirect to Strava authorization page
+      window.location.href = data.authorization_url
     } catch (error) {
       console.error('Failed to connect to Strava:', error)
       alert('Failed to connect to Strava')
