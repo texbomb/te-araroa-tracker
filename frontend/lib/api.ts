@@ -17,12 +17,15 @@ export const api = {
   },
 
   // Activities
-  async getActivities(startDate?: string, endDate?: string) {
+  async getActivities(startDate?: string, endDate?: string, bustCache?: boolean) {
     const params = new URLSearchParams()
     if (startDate) params.append('start_date', startDate)
     if (endDate) params.append('end_date', endDate)
 
-    const response = await fetch(`${API_BASE_URL}/api/activities?${params}`)
+    const response = await fetch(`${API_BASE_URL}/api/activities?${params}`, {
+      // Bypass cache when data has just changed, use cache for normal loads
+      cache: bustCache ? 'no-store' : 'default'
+    })
     if (!response.ok) throw new Error('Failed to fetch activities')
     return response.json()
   },

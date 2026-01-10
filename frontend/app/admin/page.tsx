@@ -36,9 +36,9 @@ function AdminPageContent() {
     if (stravaConnectedParam === 'true') {
       setStravaConnected(true)
       alert(`Successfully connected to Strava! Welcome ${athleteName || ''}!`)
-      // Refresh activities after successful connection
+      // Refresh activities after successful connection (bust cache in case webhook already synced)
       if (isAuthenticated) {
-        fetchActivities()
+        fetchActivities(true)
       }
       // Clean up URL
       router.replace('/admin')
@@ -49,12 +49,12 @@ function AdminPageContent() {
     }
   }, [searchParams, router, isAuthenticated])
 
-  const fetchActivities = async () => {
+  const fetchActivities = async (bustCache = false) => {
     try {
       setLoading(true)
-      const data = await api.getActivities()
+      const data = await api.getActivities(undefined, undefined, bustCache)
 
-      // Check if data is an array
+      // Validate response is an array
       if (!Array.isArray(data)) {
         console.error('Activities API returned non-array:', data)
         setActivities([])
@@ -65,7 +65,6 @@ function AdminPageContent() {
       const sorted = data.sort((a: Activity, b: Activity) =>
         new Date(b.date).getTime() - new Date(a.date).getTime()
       )
-      console.log('Sorted activities:', sorted.length, 'items')
       setActivities(sorted)
     } catch (error) {
       console.error('Failed to fetch activities:', error)
@@ -137,7 +136,8 @@ function AdminPageContent() {
 
       if (data.success) {
         alert(`Successfully synced ${data.new_activities} new activities from Strava`)
-        fetchActivities()
+        // Bust cache to ensure new activities are fetched immediately
+        fetchActivities(true)
       }
     } catch (error) {
       console.error('Failed to sync Strava activities:', error)
@@ -148,7 +148,8 @@ function AdminPageContent() {
   }
 
   const handleUploadComplete = () => {
-    fetchActivities()
+    // Bust cache to ensure new uploaded activity is fetched immediately
+    fetchActivities(true)
   }
 
   const handleDeleteClick = (activityId: number) => {
@@ -157,13 +158,12 @@ function AdminPageContent() {
 
   const handleDeleteConfirm = async (activityId: number) => {
     try {
-      // TODO: Implement delete endpoint
       await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/activities/${activityId}`, {
         method: 'DELETE'
       })
 
-      // Refresh list
-      fetchActivities()
+      // Refresh list with cache busting to ensure deleted activity is removed immediately
+      fetchActivities(true)
       setDeleteConfirm(null)
     } catch (error) {
       console.error('Failed to delete activity:', error)

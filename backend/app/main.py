@@ -32,9 +32,6 @@ origins = [
 if frontend_url := os.getenv("FRONTEND_URL"):
     origins.append(frontend_url.rstrip("/"))
 
-# Log allowed origins for debugging
-print(f"CORS allowed origins: {origins}")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
