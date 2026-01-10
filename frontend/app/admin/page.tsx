@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import AdminAuth from '@/components/AdminAuth'
 import UploadGPX from '@/components/UploadGPX'
 import { api } from '@/lib/api'
@@ -16,8 +16,9 @@ interface Activity {
   source: string
 }
 
-export default function AdminPage() {
+function AdminPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
@@ -25,6 +26,24 @@ export default function AdminPage() {
   const [stravaConnected, setStravaConnected] = useState(false)
   const [stravaLoading, setStravaLoading] = useState(false)
   const [stravaSyncing, setStravaSyncing] = useState(false)
+
+  // Handle OAuth callback from Strava
+  useEffect(() => {
+    const stravaConnectedParam = searchParams.get('strava_connected')
+    const stravaError = searchParams.get('strava_error')
+    const athleteName = searchParams.get('athlete_name')
+
+    if (stravaConnectedParam === 'true') {
+      setStravaConnected(true)
+      alert(`Successfully connected to Strava! Welcome ${athleteName || ''}!`)
+      // Clean up URL
+      router.replace('/admin')
+    } else if (stravaError) {
+      alert(`Failed to connect to Strava: ${stravaError}`)
+      // Clean up URL
+      router.replace('/admin')
+    }
+  }, [searchParams, router])
 
   const fetchActivities = async () => {
     try {
@@ -61,30 +80,17 @@ export default function AdminPage() {
   const handleStravaConnect = async () => {
     try {
       setStravaLoading(true)
+
+      // Use backend callback for better security - tokens never touch frontend
       const redirectUri = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/strava/callback`
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/strava/auth/authorize?redirect_uri=${encodeURIComponent(redirectUri)}`
       )
       const data = await response.json()
 
-      // Open Strava authorization in new window
-      window.open(data.authorization_url, '_blank', 'width=600,height=700')
-
-      // Poll for connection status
-      const pollInterval = setInterval(async () => {
-        const statusResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/strava/auth/status`)
-        const statusData = await statusResponse.json()
-
-        if (statusData.connected) {
-          clearInterval(pollInterval)
-          setStravaConnected(true)
-          setStravaLoading(false)
-          alert('Successfully connected to Strava!')
-        }
-      }, 2000)
-
-      // Stop polling after 2 minutes
-      setTimeout(() => clearInterval(pollInterval), 120000)
+      // Redirect to Strava authorization page
+      // Backend will handle the callback and redirect back to /admin with status
+      window.location.href = data.authorization_url
     } catch (error) {
       console.error('Failed to connect to Strava:', error)
       alert('Failed to connect to Strava')
@@ -408,5 +414,21 @@ export default function AdminPage() {
         )}
       </main>
     </div>
+  )
+}
+
+// Wrap in Suspense boundary for Next.js 14+ static generation
+export default function AdminPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-purple-600 border-r-transparent"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <AdminPageContent />
+    </Suspense>
   )
 }

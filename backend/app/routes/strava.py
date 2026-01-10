@@ -44,43 +44,61 @@ async def get_authorization_url(
 
 @router.get("/auth/callback")
 async def oauth_callback(
-    code: str = Query(..., description="Authorization code from Strava"),
+    code: str = Query(None, description="Authorization code from Strava"),
+    error: str = Query(None, description="Error from Strava"),
     scope: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
     """
     OAuth callback endpoint - Strava redirects here after user authorization
+    After token exchange, redirects to frontend with status
 
     Args:
         code: Authorization code from Strava
+        error: Error message if authorization failed
         scope: Granted scopes (optional)
         db: Database session
 
     Returns:
-        Success message with athlete information
+        Redirect to frontend with success or error status
     """
+    from fastapi.responses import RedirectResponse
+    import os
+
+    # Get frontend URL from environment or use default
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+    # Handle authorization error
+    if error:
+        return RedirectResponse(
+            url=f"{frontend_url}/admin?strava_error={error}",
+            status_code=302
+        )
+
     if not code:
-        raise HTTPException(status_code=400, detail="Authorization code is required")
+        return RedirectResponse(
+            url=f"{frontend_url}/admin?strava_error=no_code",
+            status_code=302
+        )
 
     service = StravaSyncService()
 
     try:
         result = await service.exchange_code_for_token(code, db)
 
-        return {
-            "success": True,
-            "message": "Successfully connected to Strava",
-            "athlete": {
-                "id": result["athlete"]["id"],
-                "username": result["athlete"].get("username"),
-                "firstname": result["athlete"].get("firstname"),
-                "lastname": result["athlete"].get("lastname")
-            },
-            "expires_at": result["expires_at"]
-        }
+        # Redirect to frontend with success
+        athlete_name = f"{result['athlete'].get('firstname', '')} {result['athlete'].get('lastname', '')}".strip()
+        return RedirectResponse(
+            url=f"{frontend_url}/admin?strava_connected=true&athlete_name={athlete_name}",
+            status_code=302
+        )
 
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to authenticate: {str(e)}")
+        # Redirect to frontend with error
+        return RedirectResponse(
+            url=f"{frontend_url}/admin?strava_error={str(e)}",
+            status_code=302
+        )
 
 
 @router.get("/auth/status")
