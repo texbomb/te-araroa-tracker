@@ -34,7 +34,10 @@ export default function ElevationProfile({ gpsData, height = 150 }: ElevationPro
         const prev = gpsData[i - 1]
         const R = 6371 // Earth's radius in km
         const dLat = toRad(point.lat - prev.lat)
-        const dLon = toRad(point.lon - prev.lon)
+        // Handle both 'lon' and 'lng' for backwards compatibility
+        const prevLon = (prev as any).lon ?? (prev as any).lng
+        const pointLon = (point as any).lon ?? (point as any).lng
+        const dLon = toRad(pointLon - prevLon)
         const a =
           Math.sin(dLat / 2) * Math.sin(dLat / 2) +
           Math.cos(toRad(prev.lat)) * Math.cos(toRad(point.lat)) *
