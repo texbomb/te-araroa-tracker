@@ -36,6 +36,10 @@ function AdminPageContent() {
     if (stravaConnectedParam === 'true') {
       setStravaConnected(true)
       alert(`Successfully connected to Strava! Welcome ${athleteName || ''}!`)
+      // Refresh activities after successful connection
+      if (isAuthenticated) {
+        fetchActivities()
+      }
       // Clean up URL
       router.replace('/admin')
     } else if (stravaError) {
@@ -43,12 +47,20 @@ function AdminPageContent() {
       // Clean up URL
       router.replace('/admin')
     }
-  }, [searchParams, router])
+  }, [searchParams, router, isAuthenticated])
 
   const fetchActivities = async () => {
     try {
       setLoading(true)
       const data = await api.getActivities()
+
+      // Check if data is an array
+      if (!Array.isArray(data)) {
+        console.error('Activities API returned non-array:', data)
+        setActivities([])
+        return
+      }
+
       // Sort by date descending (newest first)
       const sorted = data.sort((a: Activity, b: Activity) =>
         new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -56,6 +68,7 @@ function AdminPageContent() {
       setActivities(sorted)
     } catch (error) {
       console.error('Failed to fetch activities:', error)
+      setActivities([])
     } finally {
       setLoading(false)
     }
