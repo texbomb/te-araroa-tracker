@@ -54,11 +54,7 @@ function AdminPageContent() {
       setLoading(true)
       const data = await api.getActivities(undefined, undefined, bustCache)
 
-      console.log('Activities API response:', data)
-      console.log('Is array:', Array.isArray(data))
-      console.log('Length:', data?.length)
-
-      // Check if data is an array
+      // Validate response is an array
       if (!Array.isArray(data)) {
         console.error('Activities API returned non-array:', data)
         setActivities([])
@@ -69,7 +65,6 @@ function AdminPageContent() {
       const sorted = data.sort((a: Activity, b: Activity) =>
         new Date(b.date).getTime() - new Date(a.date).getTime()
       )
-      console.log('Sorted activities:', sorted.length, 'items')
       setActivities(sorted)
     } catch (error) {
       console.error('Failed to fetch activities:', error)
