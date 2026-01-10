@@ -10,9 +10,9 @@ interface Activity {
   id: number
   name: string | null
   date: string
-  distance_km: number
-  elevation_gain_m: number
-  duration_seconds: number
+  distance_km: number | null
+  elevation_gain_m: number | null
+  duration_seconds: number | null
   source: string
 }
 
@@ -54,6 +54,10 @@ function AdminPageContent() {
       setLoading(true)
       const data = await api.getActivities()
 
+      console.log('Activities API response:', data)
+      console.log('Is array:', Array.isArray(data))
+      console.log('Length:', data?.length)
+
       // Validate that we received an array
       if (!Array.isArray(data)) {
         console.error('Activities API returned non-array:', data)
@@ -65,6 +69,7 @@ function AdminPageContent() {
       const sorted = data.sort((a: Activity, b: Activity) =>
         new Date(b.date).getTime() - new Date(a.date).getTime()
       )
+      console.log('Sorted activities:', sorted.length, 'items')
       setActivities(sorted)
     } catch (error) {
       console.error('Failed to fetch activities:', error)
@@ -364,15 +369,21 @@ function AdminPageContent() {
                           <div className="flex gap-6 mt-2 text-sm">
                             <div>
                               <span className="text-gray-500">Distance:</span>{' '}
-                              <span className="font-medium text-gray-900">{activity.distance_km.toFixed(1)} km</span>
+                              <span className="font-medium text-gray-900">
+                                {activity.distance_km != null ? `${activity.distance_km.toFixed(1)} km` : 'N/A'}
+                              </span>
                             </div>
                             <div>
                               <span className="text-gray-500">Elevation:</span>{' '}
-                              <span className="font-medium text-gray-900">{activity.elevation_gain_m}m</span>
+                              <span className="font-medium text-gray-900">
+                                {activity.elevation_gain_m != null ? `${activity.elevation_gain_m}m` : 'N/A'}
+                              </span>
                             </div>
                             <div>
                               <span className="text-gray-500">Duration:</span>{' '}
-                              <span className="font-medium text-gray-900">{formatDuration(activity.duration_seconds)}</span>
+                              <span className="font-medium text-gray-900">
+                                {activity.duration_seconds != null ? formatDuration(activity.duration_seconds) : 'N/A'}
+                              </span>
                             </div>
                           </div>
                         </div>
