@@ -54,7 +54,7 @@ function AdminPageContent() {
       setLoading(true)
       const data = await api.getActivities()
 
-      // Validate that we received an array
+      // Check if data is an array
       if (!Array.isArray(data)) {
         console.error('Activities API returned non-array:', data)
         setActivities([])
