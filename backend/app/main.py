@@ -52,13 +52,14 @@ async def health_check():
 
 
 # Import and include routers
-from app.routes import garmin, activities, test_data, admin, strava
+from app.routes import garmin, activities, test_data, admin, strava, planned_route
 from app.routers import gpx
 
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(garmin.router, prefix="/api/garmin", tags=["garmin"])
 app.include_router(strava.router, prefix="/api/strava", tags=["strava"])
 app.include_router(activities.router, prefix="/api/activities", tags=["activities"])
+app.include_router(planned_route.router, prefix="/api/planned-route", tags=["planned-route"])
 app.include_router(test_data.router, prefix="/api/test", tags=["test-data"])
 app.include_router(gpx.router, prefix="/api", tags=["gpx"])
 # app.include_router(photos.router, prefix="/api/photos", tags=["photos"])
