@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import AdminAuth from '@/components/AdminAuth'
 import UploadGPX from '@/components/UploadGPX'
@@ -16,7 +16,7 @@ interface Activity {
   source: string
 }
 
-export default function AdminPage() {
+function AdminPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -414,5 +414,21 @@ export default function AdminPage() {
         )}
       </main>
     </div>
+  )
+}
+
+// Wrap in Suspense boundary for Next.js 14+ static generation
+export default function AdminPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-purple-600 border-r-transparent"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <AdminPageContent />
+    </Suspense>
   )
 }
