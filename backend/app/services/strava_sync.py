@@ -293,6 +293,10 @@ class StravaSyncService:
         min_elevation = None
         max_elevation = None
 
+        # Always use Strava's pre-encoded polyline if available (more reliable)
+        if strava_data.get("map", {}).get("polyline"):
+            route_polyline_str = strava_data["map"]["polyline"]
+
         streams = strava_data.get("streams", {})
 
         if "latlng" in streams and "altitude" in streams and "time" in streams:
@@ -300,24 +304,18 @@ class StravaSyncService:
             altitude_data = streams["altitude"]["data"]
             time_data = streams["time"]["data"]
 
-            for i, (lat, lng) in enumerate(latlng_data):
+            for i, (lat, lon) in enumerate(latlng_data):
                 raw_gps_data.append({
                     "lat": lat,
-                    "lng": lng,
+                    "lon": lon,
                     "elevation": altitude_data[i] if i < len(altitude_data) else None,
                     "time": time_data[i] if i < len(time_data) else None
                 })
-
-            # Create polyline from coordinates
-            route_polyline_str = polyline.encode(latlng_data, 5)
 
             # Calculate elevation min/max
             if altitude_data:
                 min_elevation = int(min(altitude_data))
                 max_elevation = int(max(altitude_data))
-        elif strava_data.get("map", {}).get("polyline"):
-            # Use Strava's polyline if streams not available
-            route_polyline_str = strava_data["map"]["polyline"]
 
         # Create Activity instance
         activity = Activity(
