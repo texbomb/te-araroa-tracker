@@ -96,7 +96,7 @@ function AdminPageContent() {
       setStravaLoading(true)
 
       // Use backend callback for better security - tokens never touch frontend
-      const redirectUri = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/strava/callback`
+      const redirectUri = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/strava/auth/callback`
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/strava/auth/authorize?redirect_uri=${encodeURIComponent(redirectUri)}`
       )

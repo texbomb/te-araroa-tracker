@@ -66,7 +66,8 @@ async def oauth_callback(
     import os
 
     # Get frontend URL from environment or use default
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    # Strip trailing slash to avoid URL issues
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
 
     # Handle authorization error
     if error:
