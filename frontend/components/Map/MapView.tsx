@@ -184,38 +184,34 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
           if (index === 0) {
             const endPoint = activity.raw_gps_data[activity.raw_gps_data.length - 1]
 
-            // Create a custom current position marker element
+            // Create a custom current position marker with your custom image
             const currentLocationEl = document.createElement('div')
             currentLocationEl.className = 'current-location-marker'
             currentLocationEl.innerHTML = `
               <div style="
-                width: 40px;
-                height: 40px;
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                border: 4px solid white;
-                border-radius: 50%;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 20px;
-                animation: pulse 2s infinite;
-              ">
-                📍
-              </div>
+                width: 60px;
+                height: 70px;
+                background-image: url('/custom-marker.png');
+                background-size: contain;
+                background-repeat: no-repeat;
+                background-position: center;
+                cursor: pointer;
+                filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+                animation: bounce 2s ease-in-out infinite;
+              "></div>
             `
 
-            // Add pulsing animation
+            // Add bounce animation
             const style = document.createElement('style')
             style.textContent = `
-              @keyframes pulse {
-                0%, 100% { transform: scale(1); opacity: 1; }
-                50% { transform: scale(1.1); opacity: 0.9; }
+              @keyframes bounce {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-8px); }
               }
             `
             document.head.appendChild(style)
 
-            new mapboxgl.Marker({ element: currentLocationEl })
+            new mapboxgl.Marker({ element: currentLocationEl, anchor: 'bottom' })
               .setLngLat([endPoint.lon, endPoint.lat])
               .setPopup(
                 new mapboxgl.Popup({ offset: 25 }).setHTML(
