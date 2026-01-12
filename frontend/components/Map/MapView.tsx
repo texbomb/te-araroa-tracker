@@ -240,7 +240,79 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
       }
     }
 
-    mapInstance.on('load', loadActivities)
+    // Load photos and display them as markers
+    const loadPhotoMarkers = async () => {
+      if (!mapInstance) return
+
+      try {
+        const photos = await api.getPhotosWithLocation()
+
+        if (photos.length === 0) {
+          console.log('No geotagged photos to display')
+          return
+        }
+
+        photos.forEach((photo: any) => {
+          // Create custom photo marker
+          const photoMarkerEl = document.createElement('div')
+          photoMarkerEl.className = 'photo-marker'
+          photoMarkerEl.innerHTML = `
+            <div style="
+              width: 42px;
+              height: 42px;
+              border-radius: 50%;
+              background: white;
+              border: 3px solid #8b5cf6;
+              background-image: url('${photo.thumbnail_url}');
+              background-size: cover;
+              background-position: center;
+              cursor: pointer;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+              transition: transform 0.2s;
+            "></div>
+          `
+
+          // Add hover effect
+          photoMarkerEl.addEventListener('mouseenter', () => {
+            const div = photoMarkerEl.querySelector('div') as HTMLElement
+            if (div) div.style.transform = 'scale(1.1)'
+          })
+          photoMarkerEl.addEventListener('mouseleave', () => {
+            const div = photoMarkerEl.querySelector('div') as HTMLElement
+            if (div) div.style.transform = 'scale(1)'
+          })
+
+          // Create popup with photo preview
+          const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`
+            <div style="padding: 8px; max-width: 220px;">
+              <img
+                src="${photo.thumbnail_url}"
+                style="width: 100%; height: auto; margin-bottom: 8px; border-radius: 4px;"
+                alt="${photo.caption || 'Photo'}"
+              />
+              ${photo.caption ? `<p style="font-weight: bold; margin-bottom: 4px; font-size: 14px;">${photo.caption}</p>` : ''}
+              <p style="font-size: 12px; color: #666;">
+                📸 ${photo.date_taken ? new Date(photo.date_taken).toLocaleDateString() : 'Unknown date'}
+              </p>
+            </div>
+          `)
+
+          new mapboxgl.Marker({ element: photoMarkerEl, anchor: 'center' })
+            .setLngLat([photo.longitude, photo.latitude])
+            .setPopup(popup)
+            .addTo(mapInstance)
+        })
+
+        console.log(`Displayed ${photos.length} photo markers on map`)
+      } catch (error) {
+        console.error('Failed to load photo markers:', error)
+      }
+    }
+
+    mapInstance.on('load', () => {
+      loadActivities()
+      loadPhotoMarkers()
+    })
 
     // Clean up on unmount
     return () => {
