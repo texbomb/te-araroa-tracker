@@ -26,7 +26,10 @@ limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
 
 # File upload configuration
-UPLOAD_DIR = Path("/app/uploads/photos")
+# Use Railway volume if available, otherwise fall back to /app (ephemeral)
+import os
+UPLOAD_BASE = os.getenv("RAILWAY_VOLUME_MOUNT_PATH", "/app")
+UPLOAD_DIR = Path(UPLOAD_BASE) / "uploads" / "photos"
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.heic', '.JPG', '.JPEG', '.PNG', '.HEIC'}
 ALLOWED_MIME_TYPES = {'image/jpeg', 'image/png', 'image/heic'}
@@ -199,6 +202,15 @@ async def upload_photo(
 
         # Extract EXIF data
         exif_data = extract_exif_data(str(file_path))
+
+        # Log EXIF extraction results for debugging
+        if exif_data.latitude and exif_data.longitude:
+            logger.info(f"EXIF GPS extracted: {exif_data.latitude}, {exif_data.longitude}")
+        else:
+            logger.warning(f"No GPS data in photo: {file.filename}")
+
+        if not exif_data.date_taken:
+            logger.warning(f"No date_taken in EXIF for: {file.filename}")
 
         # Auto-link to nearest activity if not manually specified
         final_activity_id = activity_id
