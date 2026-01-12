@@ -351,7 +351,7 @@ async def get_photo(
 
 @router.get("/{photo_id}/file")
 @limiter.limit("120/minute")  # Higher limit for image serving
-async def get_photo_file(photo_id: int, db: Session = Depends(get_db)):
+async def get_photo_file(request: Request, photo_id: int, db: Session = Depends(get_db)):
     """
     Serve photo file.
 
