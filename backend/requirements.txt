@@ -12,3 +12,6 @@ requests>=2.31.0
 httpx>=0.25.0
 gpxpy>=1.6.2
 slowapi>=0.1.9
+Pillow>=10.0.0
+piexif>=1.1.3
+python-dateutil>=2.8.2

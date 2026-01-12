@@ -72,6 +72,39 @@ export const api = {
     return response.json()
   },
 
+  async getPhotosWithLocation() {
+    const response = await fetch(`${API_BASE_URL}/api/photos/by-location`)
+    if (!response.ok) throw new Error('Failed to fetch photos with location')
+    return response.json()
+  },
+
+  async getPhoto(photoId: number) {
+    const response = await fetch(`${API_BASE_URL}/api/photos/${photoId}`)
+    if (!response.ok) throw new Error('Failed to fetch photo')
+    return response.json()
+  },
+
+  async deletePhoto(photoId: number) {
+    const response = await fetch(`${API_BASE_URL}/api/photos/${photoId}`, {
+      method: 'DELETE',
+    })
+    if (!response.ok) throw new Error('Failed to delete photo')
+    return response.json()
+  },
+
+  async updatePhoto(photoId: number, caption?: string, activityId?: number) {
+    const formData = new FormData()
+    if (caption !== undefined) formData.append('caption', caption)
+    if (activityId !== undefined) formData.append('activity_id', activityId.toString())
+
+    const response = await fetch(`${API_BASE_URL}/api/photos/${photoId}`, {
+      method: 'POST',
+      body: formData,
+    })
+    if (!response.ok) throw new Error('Failed to update photo')
+    return response.json()
+  },
+
   // Journal
   async createOrUpdateJournal(date: string, content: string) {
     const response = await fetch(`${API_BASE_URL}/api/journal`, {
