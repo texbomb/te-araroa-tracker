@@ -18,6 +18,7 @@ from slowapi.util import get_remote_address
 from app.database import get_db
 from app.models.photo import Photo
 from app.utils.exif_extractor import extract_exif_data, validate_image_file
+from app.utils.gps_utils import find_nearest_activity
 
 logger = logging.getLogger(__name__)
 
@@ -199,6 +200,20 @@ async def upload_photo(
         # Extract EXIF data
         exif_data = extract_exif_data(str(file_path))
 
+        # Auto-link to nearest activity if not manually specified
+        final_activity_id = activity_id
+        if not activity_id and exif_data.latitude and exif_data.longitude:
+            # Find nearest activity within 5km
+            nearest_activity_id = find_nearest_activity(
+                exif_data.latitude,
+                exif_data.longitude,
+                db,
+                max_distance_km=5.0
+            )
+            if nearest_activity_id:
+                final_activity_id = nearest_activity_id
+                logger.info(f"Auto-linked photo to activity {nearest_activity_id}")
+
         # Create Photo record
         new_photo = Photo(
             filename=file.filename,
@@ -210,7 +225,7 @@ async def upload_photo(
             date_taken=exif_data.date_taken or datetime.now(),  # Default to now if no EXIF
             camera_make=exif_data.camera_make,
             camera_model=exif_data.camera_model,
-            activity_id=activity_id
+            activity_id=final_activity_id
         )
 
         db.add(new_photo)
@@ -435,3 +450,76 @@ async def update_photo(
     logger.info(f"Photo updated: ID {photo_id}")
 
     return PhotoResponse.model_validate(photo)
+
+
+@router.post("/relink-all")
+@limiter.limit("5/hour")  # Limit batch operations
+async def relink_all_photos_to_activities(
+    request: Request,
+    max_distance_km: float = 5.0,
+    db: Session = Depends(get_db)
+):
+    """
+    Re-link all photos to their nearest activities based on GPS proximity.
+
+    Useful for:
+    - Updating links after adding new activities
+    - Fixing links if activities were deleted
+    - Testing different distance thresholds
+
+    Args:
+        max_distance_km: Maximum distance threshold in kilometers (default 5.0)
+
+    Returns:
+        Summary of linking results
+    """
+    # Get all photos with GPS coordinates
+    photos = db.query(Photo).filter(
+        Photo.latitude.isnot(None),
+        Photo.longitude.isnot(None)
+    ).all()
+
+    if not photos:
+        return {
+            "success": True,
+            "message": "No photos with GPS coordinates to process",
+            "linked": 0,
+            "unlinked": 0,
+            "total": 0
+        }
+
+    linked_count = 0
+    unlinked_count = 0
+
+    for photo in photos:
+        # Find nearest activity
+        nearest_activity_id = find_nearest_activity(
+            float(photo.latitude),
+            float(photo.longitude),
+            db,
+            max_distance_km=max_distance_km
+        )
+
+        if nearest_activity_id:
+            photo.activity_id = nearest_activity_id
+            linked_count += 1
+        else:
+            # Unlink if no nearby activity found
+            photo.activity_id = None
+            unlinked_count += 1
+
+    db.commit()
+
+    logger.info(
+        f"Re-linked {linked_count} photos, "
+        f"unlinked {unlinked_count} photos "
+        f"(threshold: {max_distance_km}km)"
+    )
+
+    return {
+        "success": True,
+        "message": f"Re-linked photos to activities within {max_distance_km}km",
+        "linked": linked_count,
+        "unlinked": unlinked_count,
+        "total": len(photos)
+    }
