@@ -159,7 +159,7 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
             },
             paint: {
               'line-color': '#000000',
-              'line-width': isSelected ? 9 : 7,
+              'line-width': 7,
               'line-opacity': 0.6,
               'line-offset': offsetPixels,
             },
@@ -175,21 +175,19 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
               'line-cap': 'round',
             },
             paint: {
-              'line-color': isSelected
-                ? '#f59e0b' // Orange for selected (overrides elevation colors)
-                : [
-                    'match',
-                    ['get', 'elevationChange'],
-                    'ascending',
-                    '#10b981', // Green for ascending
-                    'descending',
-                    '#ef4444', // Red for descending
-                    'flat',
-                    '#6b7280', // Gray for flat
-                    '#6b7280', // Default gray
-                  ],
-              'line-width': isSelected ? 6 : 4,
-              'line-opacity': isSelected ? 1 : 0.9,
+              'line-color': [
+                'match',
+                ['get', 'elevationChange'],
+                'ascending',
+                '#10b981', // Green for ascending
+                'descending',
+                '#ef4444', // Red for descending
+                'flat',
+                '#6b7280', // Gray for flat
+                '#6b7280', // Default gray
+              ],
+              'line-width': 4,
+              'line-opacity': 0.9,
               'line-offset': offsetPixels,
             },
           })
@@ -223,7 +221,7 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
               'icon-ignore-placement': true,
             },
             paint: {
-              'icon-opacity': isSelected ? 1 : 0.8,
+              'icon-opacity': 0.8,
             },
           })
 
@@ -412,54 +410,12 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
     }
   }, [])
 
-  // Update activity styling when selection changes
+  // Zoom to selected activity when selection changes
   useEffect(() => {
     if (!map.current || !map.current.isStyleLoaded()) return
 
     const mapInstance = map.current
     const activities = activitiesRef.current
-
-    activities.forEach((activity, index) => {
-      const outlineLayerId = `activity-outline-${activity.id}`
-      const lineLayerId = `activity-line-${activity.id}`
-      const arrowsLayerId = `activity-arrows-${activity.id}`
-
-      if (!mapInstance.getLayer(lineLayerId)) return
-
-      const isSelected = activity.id === selectedActivityId
-
-      // Update outline layer
-      if (mapInstance.getLayer(outlineLayerId)) {
-        mapInstance.setPaintProperty(outlineLayerId, 'line-width', isSelected ? 9 : 7)
-      }
-
-      // Update line layer (color and width)
-      mapInstance.setPaintProperty(
-        lineLayerId,
-        'line-color',
-        isSelected
-          ? '#f59e0b' // Orange for selected (solid color)
-          : [
-              'match',
-              ['get', 'elevationChange'],
-              'ascending',
-              '#10b981', // Green for ascending
-              'descending',
-              '#ef4444', // Red for descending
-              'flat',
-              '#6b7280', // Gray for flat
-              '#6b7280', // Default gray
-            ]
-      )
-
-      mapInstance.setPaintProperty(lineLayerId, 'line-width', isSelected ? 6 : 4)
-      mapInstance.setPaintProperty(lineLayerId, 'line-opacity', isSelected ? 1 : 0.9)
-
-      // Update arrows opacity
-      if (mapInstance.getLayer(arrowsLayerId)) {
-        mapInstance.setPaintProperty(arrowsLayerId, 'icon-opacity', isSelected ? 1 : 0.8)
-      }
-    })
 
     // Zoom to selected activity if one is selected
     if (selectedActivityId) {
