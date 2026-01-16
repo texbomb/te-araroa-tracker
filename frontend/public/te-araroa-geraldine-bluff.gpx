@@ -1,5 +1,5 @@
-<?xml version='1.0' encoding='utf-8'?>
-<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="Te Araroa Geraldine-Bluff Section">
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="Te Araroa Tracker">
   <metadata>
     <name>Te Araroa: Geraldine to Bluff</name>
     <desc>South Island section from Geraldine to Bluff</desc>
@@ -7,9 +7,6 @@
   <trk>
     <name>Geraldine to Bluff Section</name>
     <trkseg>
-      <trkpt lat="-44.08967190499993" lon="170.24924745600003">
-        <ele>674.0</ele>
-      </trkpt>
       <trkpt lat="-44.09090726499994" lon="170.24942139900008">
         <ele>677.0</ele>
       </trkpt>
@@ -21591,9 +21588,6 @@
       </trkpt>
       <trkpt lat="-46.59951533799995" lon="168.3183645690001">
         <ele>28.398499999995693</ele>
-      </trkpt>
-      <trkpt lat="-46.60021773699998" lon="168.31809147700005">
-        <ele>24.379300000000512</ele>
       </trkpt>
     </trkseg>
   </trk>
