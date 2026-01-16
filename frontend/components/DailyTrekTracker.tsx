@@ -15,10 +15,21 @@ interface Activity {
   raw_gps_data: Array<{ lat: number; lon: number; elevation: number; time?: string }> | null
 }
 
+interface Photo {
+  id: number
+  activity_id: number | null
+  photo_url: string
+  caption: string | null
+  latitude: number | null
+  longitude: number | null
+  date_taken: string | null
+}
+
 export default function DailyTrekTracker() {
   const [todayActivities, setTodayActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
+  const [previewPhoto, setPreviewPhoto] = useState<Photo | null>(null)
 
   const fetchTodayActivities = async () => {
     try {
@@ -55,8 +66,11 @@ export default function DailyTrekTracker() {
       // (36 hours accounts for timezone differences and late uploads)
       if (hoursSinceActivity <= 36) {
         setTodayActivities([mostRecentActivity])
+        // Fetch a preview photo for this activity
+        fetchPreviewPhoto(mostRecentActivity.id)
       } else {
         setTodayActivities([])
+        setPreviewPhoto(null)
       }
 
       setLastUpdate(new Date())
@@ -64,6 +78,20 @@ export default function DailyTrekTracker() {
       console.error('Failed to fetch today\'s activities:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchPreviewPhoto = async (activityId: number) => {
+    try {
+      const photos = await api.getPhotos(activityId)
+      if (photos && photos.length > 0) {
+        setPreviewPhoto(photos[0])
+      } else {
+        setPreviewPhoto(null)
+      }
+    } catch (error) {
+      console.error('Failed to fetch preview photo:', error)
+      setPreviewPhoto(null)
     }
   }
 
@@ -141,6 +169,23 @@ export default function DailyTrekTracker() {
               <p className="text-xs text-gray-500">{formatDuration(totalDuration).split(' ')[1] || ''}</p>
             </div>
           </div>
+
+          {/* Preview Photo */}
+          {previewPhoto && (
+            <div className="bg-white/70 p-4 rounded-lg">
+              <img
+                src={previewPhoto.photo_url}
+                alt={previewPhoto.caption || "Today's trek photo"}
+                className="w-full h-64 object-cover rounded-lg shadow-md cursor-pointer"
+                onClick={() => window.open(previewPhoto.photo_url, '_blank')}
+              />
+              {previewPhoto.caption && (
+                <p className="text-sm text-gray-700 mt-2 italic text-center">
+                  {previewPhoto.caption}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Elevation Profile */}
           {todayActivities[0]?.raw_gps_data && todayActivities[0].raw_gps_data.length > 0 && (
