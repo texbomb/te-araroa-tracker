@@ -152,19 +152,23 @@ def extract_exif_data(image_path: str) -> ExifData:
     exif_data = ExifData()
 
     try:
-        # Open image
-        image = Image.open(image_path)
+        # Load EXIF data directly from file (more reliable than PIL's image.info)
+        exif_dict = piexif.load(image_path)
 
-        # Get EXIF data
-        exif_dict = piexif.load(image.info.get('exif', b''))
+        logger.info(f"EXIF keys found in {Path(image_path).name}: {list(exif_dict.keys())}")
 
         # Extract GPS coordinates
-        if piexif.GPSIFD in exif_dict and exif_dict[piexif.GPSIFD]:
-            gps_info = exif_dict[piexif.GPSIFD]
+        if 'GPS' in exif_dict and exif_dict['GPS']:
+            gps_info = exif_dict['GPS']
+            logger.info(f"GPS IFD found with keys: {list(gps_info.keys())}")
             latitude, longitude, altitude = _get_gps_coordinates(gps_info)
             exif_data.latitude = latitude
             exif_data.longitude = longitude
             exif_data.altitude = altitude
+            if latitude and longitude:
+                logger.info(f"Successfully extracted GPS: {latitude}, {longitude}")
+        else:
+            logger.warning(f"No GPS IFD found in {Path(image_path).name}")
 
         # Extract camera make and model
         if '0th' in exif_dict:
@@ -202,7 +206,7 @@ def extract_exif_data(image_path: str) -> ExifData:
                 exif_data.date_taken = _parse_exif_datetime(datetime_str)
 
     except Exception as e:
-        logger.warning(f"Failed to extract EXIF data from {image_path}: {e}")
+        logger.error(f"Failed to extract EXIF data from {image_path}: {e}", exc_info=True)
 
     return exif_data
 
