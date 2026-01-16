@@ -150,9 +150,13 @@ async def upload_planned_route_gpx(
 
     except Exception as e:
         db.rollback()
+        import traceback
+        error_detail = f"Error processing GPX file: {str(e)}"
+        print(f"GPX Upload Error: {error_detail}")
+        print(traceback.format_exc())
         raise HTTPException(
             status_code=400,
-            detail=f"Error processing GPX file: {str(e)}"
+            detail=error_detail
         )
 
 
