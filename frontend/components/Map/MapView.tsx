@@ -138,7 +138,7 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
             },
             geometry: {
               type: 'LineString' as const,
-              coordinates,
+              coordinates: coordinates as [number, number][],
             },
           }]
 
