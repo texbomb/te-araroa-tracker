@@ -387,16 +387,17 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
       }
     }
 
-    mapInstance.on('load', async () => {
+    mapInstance.on('load', () => {
       // Load arrow icon for directional indicators
-      try {
-        const arrowImage = await mapInstance.loadImage('/arrow-chevron.svg')
-        if (!mapInstance.hasImage('arrow-chevron')) {
-          mapInstance.addImage('arrow-chevron', arrowImage.data)
+      mapInstance.loadImage('/arrow-chevron.svg', (error, image) => {
+        if (error) {
+          console.error('Failed to load arrow icon:', error)
+          return
         }
-      } catch (error) {
-        console.error('Failed to load arrow icon:', error)
-      }
+        if (image && !mapInstance.hasImage('arrow-chevron')) {
+          mapInstance.addImage('arrow-chevron', image)
+        }
+      })
 
       loadActivities()
       loadPhotoMarkers()
