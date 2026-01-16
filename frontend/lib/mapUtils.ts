@@ -170,21 +170,21 @@ export function segmentRouteByElevation(
  *
  * @param activityIndex - Index of the activity in the list (0-based)
  * @param totalActivities - Total number of activities being displayed
- * @param maxOffset - Maximum offset in pixels (default: 3)
+ * @param maxOffset - Maximum offset in pixels (default: 6)
  * @returns Offset value in pixels
  */
 export function calculateActivityOffset(
   activityIndex: number,
   totalActivities: number,
-  maxOffset: number = 3
+  maxOffset: number = 6
 ): number {
   if (totalActivities <= 1) {
     return 0
   }
 
   // Distribute offsets evenly from -maxOffset to +maxOffset
-  // Example for 3 activities: -3, 0, 3
-  // Example for 5 activities: -3, -1.5, 0, 1.5, 3
+  // Example for 3 activities: -6, 0, 6
+  // Example for 5 activities: -6, -3, 0, 3, 6
   const step = (maxOffset * 2) / (totalActivities - 1)
   return -maxOffset + activityIndex * step
 }
