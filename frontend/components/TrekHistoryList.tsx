@@ -25,12 +25,11 @@ interface Activity {
 interface Photo {
   id: number
   activity_id: number | null
-  cloudinary_url: string
-  thumbnail_url: string | null
+  photo_url: string
   caption: string | null
   latitude: number | null
   longitude: number | null
-  taken_at: string | null
+  date_taken: string | null
 }
 
 interface TrekHistoryListProps {
@@ -49,6 +48,7 @@ export default function TrekHistoryList({
   const [expandedActivityId, setExpandedActivityId] = useState<number | null>(null)
   const [activityPhotos, setActivityPhotos] = useState<{ [activityId: number]: Photo[] }>({})
   const [loadingPhotos, setLoadingPhotos] = useState<{ [activityId: number]: boolean }>({})
+  const [previewPhotos, setPreviewPhotos] = useState<{ [activityId: number]: Photo | null }>({})
   const selectedRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -71,10 +71,30 @@ export default function TrekHistoryList({
         new Date(b.date).getTime() - new Date(a.date).getTime()
       )
       setActivities(sorted)
+
+      // Fetch preview photos for the first 5 most recent activities
+      const recentActivities = sorted.slice(0, 5)
+      for (const activity of recentActivities) {
+        fetchPreviewPhoto(activity.id)
+      }
     } catch (error) {
       console.error('Failed to fetch activities:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchPreviewPhoto = async (activityId: number) => {
+    try {
+      const photos = await api.getPhotos(activityId)
+      if (photos && photos.length > 0) {
+        setPreviewPhotos(prev => ({ ...prev, [activityId]: photos[0] }))
+      } else {
+        setPreviewPhotos(prev => ({ ...prev, [activityId]: null }))
+      }
+    } catch (error) {
+      console.error('Failed to fetch preview photo:', error)
+      setPreviewPhotos(prev => ({ ...prev, [activityId]: null }))
     }
   }
 
@@ -192,6 +212,26 @@ export default function TrekHistoryList({
                 </div>
               )}
 
+              {/* Preview Photo (if available) */}
+              {previewPhotos[activity.id] && (
+                <div className="mb-3">
+                  <img
+                    src={previewPhotos[activity.id]!.photo_url}
+                    alt={previewPhotos[activity.id]!.caption || 'Trek photo'}
+                    className="w-full h-40 object-cover rounded-lg shadow-sm cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      window.open(previewPhotos[activity.id]!.photo_url, '_blank')
+                    }}
+                  />
+                  {previewPhotos[activity.id]!.caption && (
+                    <div className="text-xs text-gray-500 mt-1 italic">
+                      {previewPhotos[activity.id]!.caption}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Stats Grid */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -275,12 +315,12 @@ export default function TrekHistoryList({
                       {activityPhotos[activity.id].map((photo) => (
                         <div key={photo.id} className="relative group">
                           <img
-                            src={photo.thumbnail_url || photo.cloudinary_url}
+                            src={photo.photo_url}
                             alt={photo.caption || 'Activity photo'}
                             className="w-full h-32 object-cover rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
                             onClick={(e) => {
                               e.stopPropagation()
-                              window.open(photo.cloudinary_url, '_blank')
+                              window.open(photo.photo_url, '_blank')
                             }}
                           />
                           {photo.caption && (

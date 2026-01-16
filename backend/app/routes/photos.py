@@ -42,6 +42,7 @@ class PhotoResponse(BaseModel):
     """Photo response model."""
     id: int
     filename: str
+    photo_url: str  # URL to access the photo
     caption: Optional[str]
     latitude: Optional[float]
     longitude: Optional[float]
@@ -246,7 +247,20 @@ async def upload_photo(
 
         logger.info(f"Photo uploaded: {safe_filename} (ID: {new_photo.id})")
 
-        return PhotoResponse.model_validate(new_photo)
+        return PhotoResponse(
+            id=new_photo.id,
+            filename=new_photo.filename,
+            photo_url=get_file_url(new_photo.id, new_photo.filename, request),
+            caption=new_photo.caption,
+            latitude=float(new_photo.latitude) if new_photo.latitude else None,
+            longitude=float(new_photo.longitude) if new_photo.longitude else None,
+            altitude_m=float(new_photo.altitude_m) if new_photo.altitude_m else None,
+            date_taken=new_photo.date_taken,
+            camera_make=new_photo.camera_make,
+            camera_model=new_photo.camera_model,
+            activity_id=new_photo.activity_id,
+            created_at=new_photo.created_at
+        )
 
     except HTTPException:
         raise
@@ -298,7 +312,23 @@ async def get_photos(
         query = query.filter(Photo.date_taken <= end)
 
     photos = query.all()
-    return [PhotoResponse.model_validate(photo) for photo in photos]
+    return [
+        PhotoResponse(
+            id=photo.id,
+            filename=photo.filename,
+            photo_url=get_file_url(photo.id, photo.filename, request),
+            caption=photo.caption,
+            latitude=float(photo.latitude) if photo.latitude else None,
+            longitude=float(photo.longitude) if photo.longitude else None,
+            altitude_m=float(photo.altitude_m) if photo.altitude_m else None,
+            date_taken=photo.date_taken,
+            camera_make=photo.camera_make,
+            camera_model=photo.camera_model,
+            activity_id=photo.activity_id,
+            created_at=photo.created_at
+        )
+        for photo in photos
+    ]
 
 
 @router.get("/by-location", response_model=List[PhotoLocationResponse])
@@ -358,7 +388,20 @@ async def get_photo(
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
 
-    return PhotoResponse.model_validate(photo)
+    return PhotoResponse(
+        id=photo.id,
+        filename=photo.filename,
+        photo_url=get_file_url(photo.id, photo.filename, request),
+        caption=photo.caption,
+        latitude=float(photo.latitude) if photo.latitude else None,
+        longitude=float(photo.longitude) if photo.longitude else None,
+        altitude_m=float(photo.altitude_m) if photo.altitude_m else None,
+        date_taken=photo.date_taken,
+        camera_make=photo.camera_make,
+        camera_model=photo.camera_model,
+        activity_id=photo.activity_id,
+        created_at=photo.created_at
+    )
 
 
 @router.get("/{photo_id}/file")
@@ -461,7 +504,20 @@ async def update_photo(
 
     logger.info(f"Photo updated: ID {photo_id}")
 
-    return PhotoResponse.model_validate(photo)
+    return PhotoResponse(
+        id=photo.id,
+        filename=photo.filename,
+        photo_url=get_file_url(photo.id, photo.filename, request),
+        caption=photo.caption,
+        latitude=float(photo.latitude) if photo.latitude else None,
+        longitude=float(photo.longitude) if photo.longitude else None,
+        altitude_m=float(photo.altitude_m) if photo.altitude_m else None,
+        date_taken=photo.date_taken,
+        camera_make=photo.camera_make,
+        camera_model=photo.camera_model,
+        activity_id=photo.activity_id,
+        created_at=photo.created_at
+    )
 
 
 @router.post("/relink-all")
