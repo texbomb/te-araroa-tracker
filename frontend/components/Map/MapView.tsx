@@ -4,6 +4,11 @@ import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { api } from '@/lib/api'
+import {
+  segmentRouteByElevation,
+  calculateActivityOffset,
+  createSegmentFeatureCollection,
+} from '@/lib/mapUtils'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 
@@ -111,45 +116,118 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
           // Add to bounds
           coordinates.forEach(coord => bounds.extend(coord as [number, number]))
 
-          // Add source for this activity
-          mapInstance.addSource(`activity-${activity.id}`, {
+          // Calculate offset for overlapping routes
+          const offsetPixels = calculateActivityOffset(index, activities.length)
+
+          // Segment route by elevation changes
+          const segments = segmentRouteByElevation(
+            activity.raw_gps_data,
+            activity.id,
+            5 // 5-meter elevation threshold
+          )
+
+          // If no segments (route too short), create a simple flat segment
+          const routeSegments = segments.length > 0 ? segments : [{
+            type: 'Feature' as const,
+            properties: {
+              activityId: activity.id,
+              segmentIndex: 0,
+              elevationChange: 'flat' as const,
+              elevationDelta: 0,
+              distance: 0,
+            },
+            geometry: {
+              type: 'LineString' as const,
+              coordinates: coordinates as [number, number][],
+            },
+          }]
+
+          // Add source for segmented route
+          mapInstance.addSource(`activity-segments-${activity.id}`, {
             type: 'geojson',
-            data: {
-              type: 'Feature',
-              properties: {
-                name: activity.name,
-                distance: activity.distance_km,
-                elevation: activity.elevation_gain_m,
-                date: activity.date,
-              },
-              geometry: {
-                type: 'LineString',
-                coordinates,
-              },
+            data: createSegmentFeatureCollection(routeSegments),
+          })
+
+          // Layer 1: Black outline for the route
+          mapInstance.addLayer({
+            id: `activity-outline-${activity.id}`,
+            type: 'line',
+            source: `activity-segments-${activity.id}`,
+            layout: {
+              'line-join': 'round',
+              'line-cap': 'round',
+            },
+            paint: {
+              'line-color': '#000000',
+              'line-width': isSelected ? 9 : 7,
+              'line-opacity': 0.6,
+              'line-offset': offsetPixels,
             },
           })
 
-          // Add line layer for the route
+          // Layer 2: Colored line based on elevation change
           mapInstance.addLayer({
             id: `activity-line-${activity.id}`,
             type: 'line',
-            source: `activity-${activity.id}`,
+            source: `activity-segments-${activity.id}`,
             layout: {
               'line-join': 'round',
               'line-cap': 'round',
             },
             paint: {
               'line-color': isSelected
-                ? '#f59e0b' // Orange for selected
-                : index === activities.length - 1
-                ? '#10b981' // Light green for latest
-                : '#059669', // Dark green for others
+                ? '#f59e0b' // Orange for selected (overrides elevation colors)
+                : [
+                    'match',
+                    ['get', 'elevationChange'],
+                    'ascending',
+                    '#10b981', // Green for ascending
+                    'descending',
+                    '#ef4444', // Red for descending
+                    'flat',
+                    '#6b7280', // Gray for flat
+                    '#6b7280', // Default gray
+                  ],
               'line-width': isSelected ? 6 : 4,
-              'line-opacity': isSelected ? 1 : 0.8,
+              'line-opacity': isSelected ? 1 : 0.9,
+              'line-offset': offsetPixels,
             },
           })
 
-          // Make the route clickable
+          // Layer 3: Directional arrows along the route
+          mapInstance.addLayer({
+            id: `activity-arrows-${activity.id}`,
+            type: 'symbol',
+            source: `activity-segments-${activity.id}`,
+            layout: {
+              'symbol-placement': 'line',
+              'symbol-spacing': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                5, 200,  // At zoom 5, 200px spacing (fewer arrows)
+                10, 120, // At zoom 10, 120px spacing
+                15, 80,  // At zoom 15, 80px spacing (more arrows)
+              ],
+              'icon-image': 'arrow-chevron',
+              'icon-size': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                5, 0.3,  // Small at low zoom
+                10, 0.5, // Medium at mid zoom
+                15, 0.7, // Larger at high zoom
+              ],
+              'icon-rotation-alignment': 'map',
+              'icon-allow-overlap': true,
+              'icon-ignore-placement': true,
+            },
+            paint: {
+              'icon-opacity': isSelected ? 1 : 0.8,
+            },
+          })
+
+          // Make the route clickable (on the line layer)
           mapInstance.on('click', `activity-line-${activity.id}`, () => {
             if (onActivitySelect) {
               onActivitySelect(activity.id)
@@ -310,6 +388,17 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
     }
 
     mapInstance.on('load', () => {
+      // Load arrow icon for directional indicators
+      mapInstance.loadImage('/arrow-chevron.svg', (error, image) => {
+        if (error) {
+          console.error('Failed to load arrow icon:', error)
+          return
+        }
+        if (image && !mapInstance.hasImage('arrow-chevron')) {
+          mapInstance.addImage('arrow-chevron', image)
+        }
+      })
+
       loadActivities()
       loadPhotoMarkers()
     })
@@ -331,24 +420,45 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
     const activities = activitiesRef.current
 
     activities.forEach((activity, index) => {
-      const layerId = `activity-line-${activity.id}`
-      if (!mapInstance.getLayer(layerId)) return
+      const outlineLayerId = `activity-outline-${activity.id}`
+      const lineLayerId = `activity-line-${activity.id}`
+      const arrowsLayerId = `activity-arrows-${activity.id}`
+
+      if (!mapInstance.getLayer(lineLayerId)) return
 
       const isSelected = activity.id === selectedActivityId
-      const isLatest = index === activities.length - 1
 
+      // Update outline layer
+      if (mapInstance.getLayer(outlineLayerId)) {
+        mapInstance.setPaintProperty(outlineLayerId, 'line-width', isSelected ? 9 : 7)
+      }
+
+      // Update line layer (color and width)
       mapInstance.setPaintProperty(
-        layerId,
+        lineLayerId,
         'line-color',
         isSelected
-          ? '#f59e0b' // Orange for selected
-          : isLatest
-          ? '#10b981' // Light green for latest
-          : '#059669' // Dark green for others
+          ? '#f59e0b' // Orange for selected (solid color)
+          : [
+              'match',
+              ['get', 'elevationChange'],
+              'ascending',
+              '#10b981', // Green for ascending
+              'descending',
+              '#ef4444', // Red for descending
+              'flat',
+              '#6b7280', // Gray for flat
+              '#6b7280', // Default gray
+            ]
       )
 
-      mapInstance.setPaintProperty(layerId, 'line-width', isSelected ? 6 : 4)
-      mapInstance.setPaintProperty(layerId, 'line-opacity', isSelected ? 1 : 0.8)
+      mapInstance.setPaintProperty(lineLayerId, 'line-width', isSelected ? 6 : 4)
+      mapInstance.setPaintProperty(lineLayerId, 'line-opacity', isSelected ? 1 : 0.9)
+
+      // Update arrows opacity
+      if (mapInstance.getLayer(arrowsLayerId)) {
+        mapInstance.setPaintProperty(arrowsLayerId, 'icon-opacity', isSelected ? 1 : 0.8)
+      }
     })
 
     // Zoom to selected activity if one is selected
