@@ -241,6 +241,8 @@ function AdminPageContent() {
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Planned Route</h2>
               <UploadPlannedRoute onUploadComplete={handleUploadComplete} />
+            </div>
+
             {/* Upload Photos Section */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Upload Photos</h2>
