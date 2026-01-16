@@ -89,6 +89,59 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
           console.log('Te Araroa trail overlay not available - add te-araroa-south-island.geojson to public folder')
         }
 
+        // Load planned route from API
+        try {
+          const plannedRoutes = await api.getPlannedRoute()
+          if (plannedRoutes && plannedRoutes.length > 0) {
+            // Decode polylines and combine all sections
+            const polyline = require('@mapbox/polyline')
+            const allCoordinates: [number, number][] = []
+
+            plannedRoutes.forEach((route: any) => {
+              const decoded = polyline.decode(route.route_polyline)
+              // Polyline returns [lat, lon], need to swap to [lon, lat] for GeoJSON
+              const coords = decoded.map((point: [number, number]) => [point[1], point[0]])
+              allCoordinates.push(...coords)
+            })
+
+            if (allCoordinates.length > 0) {
+              mapInstance.addSource('planned-route', {
+                type: 'geojson',
+                data: {
+                  type: 'Feature',
+                  properties: {
+                    name: 'Planned Route'
+                  },
+                  geometry: {
+                    type: 'LineString',
+                    coordinates: allCoordinates,
+                  },
+                },
+              })
+
+              // Add dashed line for planned route
+              mapInstance.addLayer({
+                id: 'planned-route-line',
+                type: 'line',
+                source: 'planned-route',
+                layout: {
+                  'line-join': 'round',
+                  'line-cap': 'round',
+                },
+                paint: {
+                  'line-color': '#8b5cf6', // Purple color for planned route
+                  'line-width': 3,
+                  'line-opacity': 0.5,
+                  'line-dasharray': [4, 2] // Dashed line pattern
+                },
+              })
+              console.log('Planned route loaded successfully')
+            }
+          }
+        } catch (routeError) {
+          console.log('No planned route uploaded yet')
+        }
+
         const activities: Activity[] = await api.getActivities()
         activitiesRef.current = activities
 

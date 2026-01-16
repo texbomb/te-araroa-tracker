@@ -3,6 +3,7 @@
 import MapView from '@/components/Map/MapView'
 import DailyTrekTracker from '@/components/DailyTrekTracker'
 import TrekHistoryList from '@/components/TrekHistoryList'
+import ProgressBar from '@/components/ProgressBar'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
@@ -118,6 +119,9 @@ export default function Home() {
             {sidebarView === 'today' ? (
               <>
                 <DailyTrekTracker key={dailyTrackerKey} />
+
+                {/* Progress Bar */}
+                <ProgressBar />
 
                 <div>
                   <h2 className="text-xl font-semibold mb-4">Overall Progress</h2>

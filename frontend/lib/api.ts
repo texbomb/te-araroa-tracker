@@ -121,4 +121,39 @@ export const api = {
     if (!response.ok) throw new Error('Failed to fetch journal entries')
     return response.json()
   },
+
+  // Planned Route
+  async getPlannedRoute() {
+    const response = await fetch(`${API_BASE_URL}/api/planned-route`)
+    if (!response.ok) throw new Error('Failed to fetch planned route')
+    return response.json()
+  },
+
+  async uploadPlannedRouteGPX(file: File, sectionName?: string, description?: string) {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (sectionName) formData.append('section_name', sectionName)
+    if (description) formData.append('description', description)
+
+    const response = await fetch(`${API_BASE_URL}/api/planned-route/upload-gpx`, {
+      method: 'POST',
+      body: formData,
+    })
+    if (!response.ok) throw new Error('Failed to upload planned route')
+    return response.json()
+  },
+
+  async getProgress() {
+    const response = await fetch(`${API_BASE_URL}/api/planned-route/progress`)
+    if (!response.ok) throw new Error('Failed to fetch progress')
+    return response.json()
+  },
+
+  async clearPlannedRoute() {
+    const response = await fetch(`${API_BASE_URL}/api/planned-route/all`, {
+      method: 'DELETE',
+    })
+    if (!response.ok) throw new Error('Failed to clear planned route')
+    return response.json()
+  },
 }
