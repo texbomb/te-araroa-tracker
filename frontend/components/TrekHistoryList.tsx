@@ -22,6 +22,16 @@ interface Activity {
   raw_gps_data: Array<{ lat: number; lon: number; elevation: number; time: string }>
 }
 
+interface Photo {
+  id: number
+  activity_id: number | null
+  photo_url: string
+  caption: string | null
+  latitude: number | null
+  longitude: number | null
+  date_taken: string | null
+}
+
 interface TrekHistoryListProps {
   selectedActivityId: number | null
   onActivitySelect: (activityId: number) => void
@@ -36,6 +46,9 @@ export default function TrekHistoryList({
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedActivityId, setExpandedActivityId] = useState<number | null>(null)
+  const [activityPhotos, setActivityPhotos] = useState<{ [activityId: number]: Photo[] }>({})
+  const [loadingPhotos, setLoadingPhotos] = useState<{ [activityId: number]: boolean }>({})
+  const [previewPhotos, setPreviewPhotos] = useState<{ [activityId: number]: Photo | null }>({})
   const selectedRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -58,10 +71,30 @@ export default function TrekHistoryList({
         new Date(b.date).getTime() - new Date(a.date).getTime()
       )
       setActivities(sorted)
+
+      // Fetch preview photos for the first 5 most recent activities
+      const recentActivities = sorted.slice(0, 5)
+      for (const activity of recentActivities) {
+        fetchPreviewPhoto(activity.id)
+      }
     } catch (error) {
       console.error('Failed to fetch activities:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchPreviewPhoto = async (activityId: number) => {
+    try {
+      const photos = await api.getPhotos(activityId)
+      if (photos && photos.length > 0) {
+        setPreviewPhotos(prev => ({ ...prev, [activityId]: photos[0] }))
+      } else {
+        setPreviewPhotos(prev => ({ ...prev, [activityId]: null }))
+      }
+    } catch (error) {
+      console.error('Failed to fetch preview photo:', error)
+      setPreviewPhotos(prev => ({ ...prev, [activityId]: null }))
     }
   }
 
@@ -81,10 +114,34 @@ export default function TrekHistoryList({
     })
   }
 
+  const fetchPhotosForActivity = async (activityId: number) => {
+    if (activityPhotos[activityId]) {
+      // Already fetched
+      return
+    }
+
+    setLoadingPhotos(prev => ({ ...prev, [activityId]: true }))
+    try {
+      const photos = await api.getPhotos(activityId)
+      setActivityPhotos(prev => ({ ...prev, [activityId]: photos }))
+    } catch (error) {
+      console.error('Failed to fetch photos for activity:', error)
+      setActivityPhotos(prev => ({ ...prev, [activityId]: [] }))
+    } finally {
+      setLoadingPhotos(prev => ({ ...prev, [activityId]: false }))
+    }
+  }
+
   const handleActivityClick = (activityId: number) => {
     onActivitySelect(activityId)
     // Toggle elevation profile expansion
-    setExpandedActivityId(expandedActivityId === activityId ? null : activityId)
+    const willExpand = expandedActivityId !== activityId
+    setExpandedActivityId(willExpand ? activityId : null)
+
+    // Fetch photos when expanding
+    if (willExpand) {
+      fetchPhotosForActivity(activityId)
+    }
   }
 
   if (loading) {
@@ -155,6 +212,26 @@ export default function TrekHistoryList({
                 </div>
               )}
 
+              {/* Preview Photo (if available) */}
+              {previewPhotos[activity.id] && (
+                <div className="mb-3">
+                  <img
+                    src={previewPhotos[activity.id]!.photo_url}
+                    alt={previewPhotos[activity.id]!.caption || 'Trek photo'}
+                    className="w-full h-40 object-cover rounded-lg shadow-sm cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      window.open(previewPhotos[activity.id]!.photo_url, '_blank')
+                    }}
+                  />
+                  {previewPhotos[activity.id]!.caption && (
+                    <div className="text-xs text-gray-500 mt-1 italic">
+                      {previewPhotos[activity.id]!.caption}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Stats Grid */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -222,10 +299,55 @@ export default function TrekHistoryList({
                 </div>
               )}
 
+              {/* Photos (Expanded) */}
+              {isExpanded && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="text-sm font-medium text-gray-700 mb-3">
+                    Photos ({activityPhotos[activity.id]?.length || 0})
+                  </div>
+
+                  {loadingPhotos[activity.id] ? (
+                    <div className="text-sm text-gray-500 text-center py-4">
+                      Loading photos...
+                    </div>
+                  ) : activityPhotos[activity.id] && activityPhotos[activity.id].length > 0 ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      {activityPhotos[activity.id].map((photo) => (
+                        <div key={photo.id} className="relative group">
+                          <img
+                            src={photo.photo_url}
+                            alt={photo.caption || 'Activity photo'}
+                            className="w-full h-32 object-cover rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              window.open(photo.photo_url, '_blank')
+                            }}
+                          />
+                          {photo.caption && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-xs p-1.5 rounded-b-lg">
+                              {photo.caption}
+                            </div>
+                          )}
+                          {photo.latitude && photo.longitude && (
+                            <div className="absolute top-1 right-1 bg-purple-600 text-white text-xs px-1.5 py-0.5 rounded-full">
+                              📍
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-400 text-center py-4">
+                      No photos for this activity
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Expand/Collapse Hint */}
               {activity.raw_gps_data && activity.raw_gps_data.length > 0 && (
                 <div className="mt-2 text-xs text-center text-gray-400">
-                  {isExpanded ? '▲ Click to hide elevation' : '▼ Click to show elevation'}
+                  {isExpanded ? '▲ Click to hide details' : '▼ Click to show details'}
                 </div>
               )}
             </div>

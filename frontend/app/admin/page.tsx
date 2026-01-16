@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import AdminAuth from '@/components/AdminAuth'
 import UploadGPX from '@/components/UploadGPX'
 import UploadPlannedRoute from '@/components/UploadPlannedRoute'
+import PhotoUpload from '@/components/PhotoUpload'
+import PhotoManagement from '@/components/PhotoManagement'
 import { api } from '@/lib/api'
 
 interface Activity {
@@ -229,7 +231,7 @@ function AdminPageContent() {
           </div>
         ) : (
           <div className="space-y-8">
-            {/* Upload Section */}
+            {/* Upload GPX Section */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Upload Activity</h2>
               <UploadGPX onUploadComplete={handleUploadComplete} />
@@ -239,6 +241,16 @@ function AdminPageContent() {
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Planned Route</h2>
               <UploadPlannedRoute onUploadComplete={handleUploadComplete} />
+            {/* Upload Photos Section */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Upload Photos</h2>
+              <PhotoUpload onUploadComplete={handleUploadComplete} />
+            </div>
+
+            {/* Manage Photos Section */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Manage Photos</h2>
+              <PhotoManagement onPhotoDeleted={handleUploadComplete} />
             </div>
 
             {/* Strava Integration */}

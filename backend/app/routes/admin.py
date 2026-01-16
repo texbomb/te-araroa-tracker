@@ -5,7 +5,8 @@ Admin routes for database initialization and authentication
 from fastapi import APIRouter, HTTPException, Request
 from app.database import engine, Base
 from app.models.activity import Activity
-from app.models.strava_token import StravaToken  # Import to ensure table is created
+from app.models.strava_token import StravaToken
+from app.models.photo import Photo  # Import to ensure table is created
 from app.config import get_settings
 from pydantic import BaseModel
 from slowapi import Limiter
@@ -53,7 +54,8 @@ async def database_status():
             "connected": True,
             "tables": tables,
             "activities_table_exists": "activities" in tables,
-            "strava_tokens_table_exists": "strava_tokens" in tables
+            "strava_tokens_table_exists": "strava_tokens" in tables,
+            "photos_table_exists": "photos" in tables
         }
     except Exception as e:
         return {

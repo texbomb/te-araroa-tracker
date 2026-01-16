@@ -4,6 +4,11 @@ import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { api } from '@/lib/api'
+import {
+  segmentRouteByElevation,
+  calculateActivityOffset,
+  createSegmentFeatureCollection,
+} from '@/lib/mapUtils'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
 
@@ -164,45 +169,116 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
           // Add to bounds
           coordinates.forEach(coord => bounds.extend(coord as [number, number]))
 
-          // Add source for this activity
-          mapInstance.addSource(`activity-${activity.id}`, {
-            type: 'geojson',
-            data: {
-              type: 'Feature',
-              properties: {
-                name: activity.name,
-                distance: activity.distance_km,
-                elevation: activity.elevation_gain_m,
-                date: activity.date,
-              },
-              geometry: {
-                type: 'LineString',
-                coordinates,
-              },
+          // Calculate offset for overlapping routes
+          const offsetPixels = calculateActivityOffset(index, activities.length)
+
+          // Segment route by elevation changes
+          const segments = segmentRouteByElevation(
+            activity.raw_gps_data,
+            activity.id,
+            5 // 5-meter elevation threshold
+          )
+
+          // If no segments (route too short), create a simple flat segment
+          const routeSegments = segments.length > 0 ? segments : [{
+            type: 'Feature' as const,
+            properties: {
+              activityId: activity.id,
+              segmentIndex: 0,
+              elevationChange: 'flat' as const,
+              elevationDelta: 0,
+              distance: 0,
             },
+            geometry: {
+              type: 'LineString' as const,
+              coordinates: coordinates as [number, number][],
+            },
+          }]
+
+          // Add source for segmented route
+          mapInstance.addSource(`activity-segments-${activity.id}`, {
+            type: 'geojson',
+            data: createSegmentFeatureCollection(routeSegments),
           })
 
-          // Add line layer for the route
+          // Layer 1: Black outline for the route
           mapInstance.addLayer({
-            id: `activity-line-${activity.id}`,
+            id: `activity-outline-${activity.id}`,
             type: 'line',
-            source: `activity-${activity.id}`,
+            source: `activity-segments-${activity.id}`,
             layout: {
               'line-join': 'round',
               'line-cap': 'round',
             },
             paint: {
-              'line-color': isSelected
-                ? '#f59e0b' // Orange for selected
-                : index === activities.length - 1
-                ? '#10b981' // Light green for latest
-                : '#059669', // Dark green for others
-              'line-width': isSelected ? 6 : 4,
-              'line-opacity': isSelected ? 1 : 0.8,
+              'line-color': '#000000',
+              'line-width': 7,
+              'line-opacity': 0.6,
+              'line-offset': offsetPixels,
             },
           })
 
-          // Make the route clickable
+          // Layer 2: Colored line based on elevation change
+          mapInstance.addLayer({
+            id: `activity-line-${activity.id}`,
+            type: 'line',
+            source: `activity-segments-${activity.id}`,
+            layout: {
+              'line-join': 'round',
+              'line-cap': 'round',
+            },
+            paint: {
+              'line-color': [
+                'match',
+                ['get', 'elevationChange'],
+                'ascending',
+                '#10b981', // Green for ascending
+                'descending',
+                '#ef4444', // Red for descending
+                'flat',
+                '#6b7280', // Gray for flat
+                '#6b7280', // Default gray
+              ],
+              'line-width': 4,
+              'line-opacity': 0.9,
+              'line-offset': offsetPixels,
+            },
+          })
+
+          // Layer 3: Directional arrows along the route
+          mapInstance.addLayer({
+            id: `activity-arrows-${activity.id}`,
+            type: 'symbol',
+            source: `activity-segments-${activity.id}`,
+            layout: {
+              'symbol-placement': 'line',
+              'symbol-spacing': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                5, 200,  // At zoom 5, 200px spacing (fewer arrows)
+                10, 120, // At zoom 10, 120px spacing
+                15, 80,  // At zoom 15, 80px spacing (more arrows)
+              ],
+              'icon-image': 'arrow-chevron',
+              'icon-size': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                5, 0.3,  // Small at low zoom
+                10, 0.5, // Medium at mid zoom
+                15, 0.7, // Larger at high zoom
+              ],
+              'icon-rotation-alignment': 'map',
+              'icon-allow-overlap': true,
+              'icon-ignore-placement': true,
+            },
+            paint: {
+              'icon-opacity': 0.8,
+            },
+          })
+
+          // Make the route clickable (on the line layer)
           mapInstance.on('click', `activity-line-${activity.id}`, () => {
             if (onActivitySelect) {
               onActivitySelect(activity.id)
@@ -293,7 +369,90 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
       }
     }
 
-    mapInstance.on('load', loadActivities)
+    // Load photos and display them as markers
+    const loadPhotoMarkers = async () => {
+      if (!mapInstance) return
+
+      try {
+        const photos = await api.getPhotosWithLocation()
+
+        if (photos.length === 0) {
+          console.log('No geotagged photos to display')
+          return
+        }
+
+        photos.forEach((photo: any) => {
+          // Create custom photo marker
+          const photoMarkerEl = document.createElement('div')
+          photoMarkerEl.className = 'photo-marker'
+          photoMarkerEl.innerHTML = `
+            <div style="
+              width: 42px;
+              height: 42px;
+              border-radius: 50%;
+              background: white;
+              border: 3px solid #8b5cf6;
+              background-image: url('${photo.thumbnail_url}');
+              background-size: cover;
+              background-position: center;
+              cursor: pointer;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+              transition: transform 0.2s;
+            "></div>
+          `
+
+          // Add hover effect
+          photoMarkerEl.addEventListener('mouseenter', () => {
+            const div = photoMarkerEl.querySelector('div') as HTMLElement
+            if (div) div.style.transform = 'scale(1.1)'
+          })
+          photoMarkerEl.addEventListener('mouseleave', () => {
+            const div = photoMarkerEl.querySelector('div') as HTMLElement
+            if (div) div.style.transform = 'scale(1)'
+          })
+
+          // Create popup with photo preview
+          const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`
+            <div style="padding: 8px; max-width: 220px;">
+              <img
+                src="${photo.thumbnail_url}"
+                style="width: 100%; height: auto; margin-bottom: 8px; border-radius: 4px;"
+                alt="${photo.caption || 'Photo'}"
+              />
+              ${photo.caption ? `<p style="font-weight: bold; margin-bottom: 4px; font-size: 14px;">${photo.caption}</p>` : ''}
+              <p style="font-size: 12px; color: #666;">
+                📸 ${photo.date_taken ? new Date(photo.date_taken).toLocaleDateString() : 'Unknown date'}
+              </p>
+            </div>
+          `)
+
+          new mapboxgl.Marker({ element: photoMarkerEl, anchor: 'center' })
+            .setLngLat([photo.longitude, photo.latitude])
+            .setPopup(popup)
+            .addTo(mapInstance)
+        })
+
+        console.log(`Displayed ${photos.length} photo markers on map`)
+      } catch (error) {
+        console.error('Failed to load photo markers:', error)
+      }
+    }
+
+    mapInstance.on('load', () => {
+      // Load arrow icon for directional indicators
+      mapInstance.loadImage('/arrow-chevron.svg', (error, image) => {
+        if (error) {
+          console.error('Failed to load arrow icon:', error)
+          return
+        }
+        if (image && !mapInstance.hasImage('arrow-chevron')) {
+          mapInstance.addImage('arrow-chevron', image)
+        }
+      })
+
+      loadActivities()
+      loadPhotoMarkers()
+    })
 
     // Clean up on unmount
     return () => {
@@ -304,33 +463,12 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
     }
   }, [])
 
-  // Update activity styling when selection changes
+  // Zoom to selected activity when selection changes
   useEffect(() => {
     if (!map.current || !map.current.isStyleLoaded()) return
 
     const mapInstance = map.current
     const activities = activitiesRef.current
-
-    activities.forEach((activity, index) => {
-      const layerId = `activity-line-${activity.id}`
-      if (!mapInstance.getLayer(layerId)) return
-
-      const isSelected = activity.id === selectedActivityId
-      const isLatest = index === activities.length - 1
-
-      mapInstance.setPaintProperty(
-        layerId,
-        'line-color',
-        isSelected
-          ? '#f59e0b' // Orange for selected
-          : isLatest
-          ? '#10b981' // Light green for latest
-          : '#059669' // Dark green for others
-      )
-
-      mapInstance.setPaintProperty(layerId, 'line-width', isSelected ? 6 : 4)
-      mapInstance.setPaintProperty(layerId, 'line-opacity', isSelected ? 1 : 0.8)
-    })
 
     // Zoom to selected activity if one is selected
     if (selectedActivityId) {
