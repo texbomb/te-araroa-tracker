@@ -90,21 +90,24 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
         }
 
         // Load planned route from API
+        let plannedRouteCoordinates: [number, number][] = []
         try {
           const plannedRoutes = await api.getPlannedRoute()
+          console.log('Planned routes received:', plannedRoutes?.length)
           if (plannedRoutes && plannedRoutes.length > 0) {
             // Decode polylines and combine all sections
             const polyline = require('@mapbox/polyline')
-            const allCoordinates: [number, number][] = []
 
             plannedRoutes.forEach((route: any) => {
-              const decoded = polyline.decode(route.route_polyline)
+              console.log('Decoding route polyline, length:', route.route_polyline?.length)
+              const decoded = polyline.decode(route.route_polyline, 5)
+              console.log('Decoded points:', decoded.length)
               // Polyline returns [lat, lon], need to swap to [lon, lat] for GeoJSON
               const coords = decoded.map((point: [number, number]) => [point[1], point[0]])
-              allCoordinates.push(...coords)
+              plannedRouteCoordinates.push(...coords)
             })
 
-            if (allCoordinates.length > 0) {
+            if (plannedRouteCoordinates.length > 0) {
               mapInstance.addSource('planned-route', {
                 type: 'geojson',
                 data: {
@@ -114,7 +117,7 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
                   },
                   geometry: {
                     type: 'LineString',
-                    coordinates: allCoordinates,
+                    coordinates: plannedRouteCoordinates,
                   },
                 },
               })
@@ -135,11 +138,11 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
                   'line-dasharray': [4, 2] // Dashed line pattern
                 },
               })
-              console.log('Planned route loaded successfully')
+              console.log('Planned route loaded successfully', plannedRouteCoordinates.length, 'coordinates')
             }
           }
         } catch (routeError) {
-          console.log('No planned route uploaded yet')
+          console.error('Error loading planned route:', routeError)
         }
 
         const activities: Activity[] = await api.getActivities()
@@ -355,7 +358,13 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
           }
         })
 
-        // Fit map to show all activities
+        // Add planned route coordinates to bounds
+        if (plannedRouteCoordinates.length > 0) {
+          plannedRouteCoordinates.forEach(coord => bounds.extend(coord))
+          console.log('Added planned route to map bounds')
+        }
+
+        // Fit map to show all activities and planned route
         if (!bounds.isEmpty()) {
           mapInstance.fitBounds(bounds, {
             padding: 50,
