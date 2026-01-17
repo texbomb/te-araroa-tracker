@@ -178,6 +178,32 @@ export default function RouteManager({ onRouteUpdate }: RouteManagerProps) {
     }
   }
 
+  const handleClearRoute = async () => {
+    if (!confirm('Delete the entire route? This cannot be undone.')) {
+      return
+    }
+
+    try {
+      setUploading(true)
+      setError(null)
+      setSuccess(null)
+
+      await api.clearPlannedRoute()
+      setSuccess('Route deleted successfully.')
+
+      // Refresh route info
+      await fetchRouteInfo()
+
+      if (onRouteUpdate) {
+        onRouteUpdate()
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete route')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-4 animate-pulse">
@@ -194,17 +220,26 @@ export default function RouteManager({ onRouteUpdate }: RouteManagerProps) {
         <h3 className="text-lg font-semibold mb-4">Full Route</h3>
 
         {routeInfo ? (
-          <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-            <p className="text-sm">
-              <span className="font-medium">Route:</span> {routeInfo.section_name || 'Unnamed Route'}
-            </p>
-            <p className="text-sm">
-              <span className="font-medium">Total Distance:</span> {routeInfo.total_distance_km.toFixed(1)} km
-            </p>
-            <p className="text-sm">
-              <span className="font-medium">Points:</span> {routeInfo.total_points.toLocaleString()}
-            </p>
-          </div>
+          <>
+            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+              <p className="text-sm">
+                <span className="font-medium">Route:</span> {routeInfo.section_name || 'Unnamed Route'}
+              </p>
+              <p className="text-sm">
+                <span className="font-medium">Total Distance:</span> {routeInfo.total_distance_km.toFixed(1)} km
+              </p>
+              <p className="text-sm">
+                <span className="font-medium">Points:</span> {routeInfo.total_points.toLocaleString()}
+              </p>
+            </div>
+            <button
+              onClick={handleClearRoute}
+              disabled={uploading}
+              className="mt-4 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-50 text-sm"
+            >
+              Delete Route
+            </button>
+          </>
         ) : (
           <>
             <p className="text-sm text-gray-600 mb-4">
