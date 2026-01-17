@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { api } from '@/lib/api'
@@ -28,17 +28,10 @@ interface MapViewProps {
   onActivitySelect?: (activityId: number | null) => void
 }
 
-interface DebugInfo {
-  plannedRouteCount: number
-  plannedRoutePoints: number
-  error: string | null
-}
-
 export default function MapView({ selectedActivityId, onActivitySelect }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const activitiesRef = useRef<Activity[]>([])
-  const [debugInfo, setDebugInfo] = useState<DebugInfo>({ plannedRouteCount: 0, plannedRoutePoints: 0, error: null })
 
   useEffect(() => {
     if (map.current || !mapContainer.current) return // Initialize map only once
@@ -60,42 +53,6 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
       if (!mapInstance) return
 
       try {
-        // Add Te Araroa Trail overlay (South Island)
-        // Trail data source: https://www.teararoa.org.nz/
-        // You can add the official trail GPX/GeoJSON to public folder and load it
-        try {
-          // Attempt to load trail data from public folder
-          const trailResponse = await fetch('/te-araroa-south-island.geojson')
-
-          if (trailResponse.ok) {
-            const trailData = await trailResponse.json()
-
-            mapInstance.addSource('te-araroa-trail', {
-              type: 'geojson',
-              data: trailData
-            })
-
-            mapInstance.addLayer({
-              id: 'te-araroa-trail-line',
-              type: 'line',
-              source: 'te-araroa-trail',
-              layout: {
-                'line-join': 'round',
-                'line-cap': 'round',
-              },
-              paint: {
-                'line-color': '#fb923c', // Orange color for the official trail
-                'line-width': 3,
-                'line-opacity': 0.6,
-                'line-dasharray': [2, 2] // Dashed line to distinguish from actual hiking routes
-              },
-            })
-            console.log('Te Araroa trail overlay loaded')
-          }
-        } catch (trailError) {
-          console.log('Te Araroa trail overlay not available - add te-araroa-south-island.geojson to public folder')
-        }
-
         // Load planned route from API
         let plannedRouteCoordinates: [number, number][] = []
         try {
@@ -146,14 +103,10 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
                 },
               })
               console.log('Planned route loaded successfully', plannedRouteCoordinates.length, 'coordinates')
-              setDebugInfo({ plannedRouteCount: plannedRoutes.length, plannedRoutePoints: plannedRouteCoordinates.length, error: null })
             }
-          } else {
-            setDebugInfo({ plannedRouteCount: 0, plannedRoutePoints: 0, error: 'No routes returned from API' })
           }
         } catch (routeError) {
           console.error('Error loading planned route:', routeError)
-          setDebugInfo({ plannedRouteCount: 0, plannedRoutePoints: 0, error: String(routeError) })
         }
 
         const activities: Activity[] = await api.getActivities()
@@ -509,24 +462,10 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
   }, [selectedActivityId])
 
   return (
-    <div className="relative w-full h-full">
-      <div
-        ref={mapContainer}
-        className="w-full h-full"
-        style={{ minHeight: '400px' }}
-      />
-      {/* Debug Panel */}
-      <div className="absolute top-2 right-2 bg-white p-3 rounded shadow-lg text-xs z-10 max-w-xs">
-        <div className="font-bold mb-1">Planned Route Debug</div>
-        <div>Routes: {debugInfo.plannedRouteCount}</div>
-        <div>Points: {debugInfo.plannedRoutePoints}</div>
-        {debugInfo.error && (
-          <div className="text-red-600 mt-1">Error: {debugInfo.error}</div>
-        )}
-        {debugInfo.plannedRoutePoints > 0 && (
-          <div className="text-green-600 mt-1">✓ Route loaded!</div>
-        )}
-      </div>
-    </div>
+    <div
+      ref={mapContainer}
+      className="w-full h-full"
+      style={{ minHeight: '400px' }}
+    />
   )
 }
