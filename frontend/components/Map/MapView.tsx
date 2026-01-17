@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { api } from '@/lib/api'
@@ -28,10 +28,17 @@ interface MapViewProps {
   onActivitySelect?: (activityId: number | null) => void
 }
 
+interface DebugInfo {
+  plannedRouteCount: number
+  plannedRoutePoints: number
+  error: string | null
+}
+
 export default function MapView({ selectedActivityId, onActivitySelect }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const activitiesRef = useRef<Activity[]>([])
+  const [debugInfo, setDebugInfo] = useState<DebugInfo>({ plannedRouteCount: 0, plannedRoutePoints: 0, error: null })
 
   useEffect(() => {
     if (map.current || !mapContainer.current) return // Initialize map only once
@@ -139,10 +146,14 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
                 },
               })
               console.log('Planned route loaded successfully', plannedRouteCoordinates.length, 'coordinates')
+              setDebugInfo({ plannedRouteCount: plannedRoutes.length, plannedRoutePoints: plannedRouteCoordinates.length, error: null })
             }
+          } else {
+            setDebugInfo({ plannedRouteCount: 0, plannedRoutePoints: 0, error: 'No routes returned from API' })
           }
         } catch (routeError) {
           console.error('Error loading planned route:', routeError)
+          setDebugInfo({ plannedRouteCount: 0, plannedRoutePoints: 0, error: String(routeError) })
         }
 
         const activities: Activity[] = await api.getActivities()
@@ -498,10 +509,24 @@ export default function MapView({ selectedActivityId, onActivitySelect }: MapVie
   }, [selectedActivityId])
 
   return (
-    <div
-      ref={mapContainer}
-      className="w-full h-full"
-      style={{ minHeight: '400px' }}
-    />
+    <div className="relative w-full h-full">
+      <div
+        ref={mapContainer}
+        className="w-full h-full"
+        style={{ minHeight: '400px' }}
+      />
+      {/* Debug Panel */}
+      <div className="absolute top-2 right-2 bg-white p-3 rounded shadow-lg text-xs z-10 max-w-xs">
+        <div className="font-bold mb-1">Planned Route Debug</div>
+        <div>Routes: {debugInfo.plannedRouteCount}</div>
+        <div>Points: {debugInfo.plannedRoutePoints}</div>
+        {debugInfo.error && (
+          <div className="text-red-600 mt-1">Error: {debugInfo.error}</div>
+        )}
+        {debugInfo.plannedRoutePoints > 0 && (
+          <div className="text-green-600 mt-1">✓ Route loaded!</div>
+        )}
+      </div>
+    </div>
   )
 }
