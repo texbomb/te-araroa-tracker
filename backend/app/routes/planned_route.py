@@ -201,6 +201,22 @@ async def get_progress(
     )
 
 
+@router.delete("/all")
+@limiter.limit("5/hour")
+async def clear_planned_route(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Clear all planned route sections (admin only)"""
+    deleted_count = db.query(PlannedRoute).delete()
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"Cleared all planned route sections ({deleted_count} deleted)"
+    }
+
+
 @router.delete("/{route_id}")
 @limiter.limit("10/hour")
 async def delete_planned_route_section(
@@ -218,19 +234,3 @@ async def delete_planned_route_section(
     db.commit()
 
     return {"success": True, "message": f"Route section {route_id} deleted"}
-
-
-@router.delete("/all")
-@limiter.limit("5/hour")
-async def clear_planned_route(
-    request: Request,
-    db: Session = Depends(get_db)
-):
-    """Clear all planned route sections (admin only)"""
-    deleted_count = db.query(PlannedRoute).delete()
-    db.commit()
-
-    return {
-        "success": True,
-        "message": f"Cleared all planned route sections ({deleted_count} deleted)"
-    }
