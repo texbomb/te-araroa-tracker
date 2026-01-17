@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import AdminAuth from '@/components/AdminAuth'
 import UploadGPX from '@/components/UploadGPX'
-import UploadPlannedRoute from '@/components/UploadPlannedRoute'
+import RouteManager from '@/components/RouteManager'
 import PhotoUpload from '@/components/PhotoUpload'
 import PhotoManagement from '@/components/PhotoManagement'
 import { api } from '@/lib/api'
@@ -239,8 +239,8 @@ function AdminPageContent() {
 
             {/* Planned Route Section */}
             <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Planned Route</h2>
-              <UploadPlannedRoute onUploadComplete={handleUploadComplete} />
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Route Management</h2>
+              <RouteManager onRouteUpdate={handleUploadComplete} />
             </div>
 
             {/* Upload Photos Section */}

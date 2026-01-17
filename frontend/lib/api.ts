@@ -156,4 +156,36 @@ export const api = {
     if (!response.ok) throw new Error('Failed to clear planned route')
     return response.json()
   },
+
+  async setActiveSection(sectionName: string, startKm: number, endKm: number, description?: string) {
+    const response = await fetch(`${API_BASE_URL}/api/planned-route/set-active-section`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        section_name: sectionName,
+        start_distance_km: startKm,
+        end_distance_km: endKm,
+        description
+      })
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || 'Failed to set active section')
+    }
+    return response.json()
+  },
+
+  async getFullRouteInfo() {
+    const response = await fetch(`${API_BASE_URL}/api/planned-route/full-route-info`)
+    if (!response.ok) throw new Error('Failed to fetch full route info')
+    return response.json()
+  },
+
+  async clearActiveSection() {
+    const response = await fetch(`${API_BASE_URL}/api/planned-route/active-section`, {
+      method: 'DELETE',
+    })
+    if (!response.ok) throw new Error('Failed to clear active section')
+    return response.json()
+  },
 }
