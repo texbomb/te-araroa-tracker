@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Numeric, Text, DateTime
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -13,3 +14,6 @@ class PlannedRoute(Base):
     distance_km = Column(Numeric(6, 2))  # Distance of this section
     description = Column(Text)  # Optional description
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationship to route sections
+    sections = relationship("RouteSection", back_populates="planned_route", cascade="all, delete-orphan")

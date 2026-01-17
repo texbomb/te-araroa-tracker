@@ -65,6 +65,26 @@ CREATE TABLE IF NOT EXISTS planned_route (
 
 CREATE INDEX IF NOT EXISTS idx_planned_route_order ON planned_route(section_order);
 
+-- Route sections - defines active subsections of planned routes
+CREATE TABLE IF NOT EXISTS route_sections (
+  id SERIAL PRIMARY KEY,
+  full_route_id INTEGER NOT NULL REFERENCES planned_route(id) ON DELETE CASCADE,
+  section_name VARCHAR(255) NOT NULL,
+  start_point_index INTEGER NOT NULL,
+  end_point_index INTEGER NOT NULL,
+  start_distance_km DECIMAL(6, 2) NOT NULL,
+  end_distance_km DECIMAL(6, 2) NOT NULL,
+  is_active BOOLEAN DEFAULT TRUE,
+  description TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CONSTRAINT valid_indices CHECK (start_point_index >= 0 AND end_point_index > start_point_index),
+  CONSTRAINT valid_distances CHECK (start_distance_km >= 0 AND end_distance_km > start_distance_km)
+);
+
+CREATE INDEX IF NOT EXISTS idx_route_sections_full_route ON route_sections(full_route_id);
+CREATE INDEX IF NOT EXISTS idx_route_sections_active ON route_sections(is_active) WHERE is_active = TRUE;
+
 -- Waypoints - towns, huts, landmarks
 CREATE TABLE IF NOT EXISTS waypoints (
   id SERIAL PRIMARY KEY,
@@ -83,6 +103,7 @@ ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE photos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE journal_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE planned_route ENABLE ROW LEVEL SECURITY;
+ALTER TABLE route_sections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE waypoints ENABLE ROW LEVEL SECURITY;
 
 -- Allow public read access
@@ -90,6 +111,7 @@ CREATE POLICY "Allow public read access on activities" ON activities FOR SELECT 
 CREATE POLICY "Allow public read access on photos" ON photos FOR SELECT USING (true);
 CREATE POLICY "Allow public read access on journal_entries" ON journal_entries FOR SELECT USING (true);
 CREATE POLICY "Allow public read access on planned_route" ON planned_route FOR SELECT USING (true);
+CREATE POLICY "Allow public read access on route_sections" ON route_sections FOR SELECT USING (true);
 CREATE POLICY "Allow public read access on waypoints" ON waypoints FOR SELECT USING (true);
 
 -- Note: Write access will be handled by backend using service key

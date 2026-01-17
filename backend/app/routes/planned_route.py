@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from datetime import date
 import polyline
 import gpxpy
+import math
 
 from app.database import get_db
 from app.models.planned_route import PlannedRoute
@@ -19,6 +20,44 @@ from slowapi.util import get_remote_address
 
 limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
+
+
+def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """
+    Calculate the great circle distance between two points on Earth
+    Returns distance in meters
+    """
+    R = 6371000  # Earth's radius in meters
+
+    # Convert to radians
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+
+    # Haversine formula
+    a = math.sin(delta_phi/2) ** 2 + \
+        math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda/2) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+
+    return R * c
+
+
+def calculate_route_distance(points: List[tuple]) -> float:
+    """
+    Calculate total distance of a route from list of (lat, lon) tuples
+    Returns distance in kilometers
+    """
+    if len(points) < 2:
+        return 0.0
+
+    total_distance = 0.0
+    for i in range(1, len(points)):
+        lat1, lon1 = points[i-1]
+        lat2, lon2 = points[i]
+        total_distance += haversine_distance(lat1, lon1, lat2, lon2)
+
+    return total_distance / 1000  # Convert to kilometers
 
 
 class PlannedRouteResponse(BaseModel):
@@ -114,9 +153,8 @@ async def upload_planned_route_gpx(
         if not all_points:
             raise HTTPException(status_code=400, detail="No points found in GPX track")
 
-        # Calculate total distance
-        moving_data = gpx.get_moving_data()
-        total_distance_km = (moving_data.moving_distance / 1000) if moving_data else 0
+        # Calculate total distance using Haversine formula
+        total_distance_km = calculate_route_distance(all_points)
 
         # Encode as polyline
         encoded_polyline = polyline.encode(all_points, 5)
