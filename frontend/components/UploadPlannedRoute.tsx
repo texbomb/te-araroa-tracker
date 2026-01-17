@@ -42,19 +42,13 @@ export default function UploadPlannedRoute({ onUploadComplete }: UploadPlannedRo
       )
 
       setSuccess(
-        `Planned route uploaded! ${result.route.distance_km.toFixed(1)} km with ${result.route.points_count} points`
+        `Planned route uploaded! ${result.route.distance_km.toFixed(1)} km with ${result.route.points_count} points. Refreshing page...`
       )
-      setSelectedFile(null)
-      setSectionName('')
-      setDescription('')
 
-      // Reset file input
-      const fileInput = document.getElementById('planned-route-file') as HTMLInputElement
-      if (fileInput) fileInput.value = ''
-
-      if (onUploadComplete) {
-        onUploadComplete()
-      }
+      // Wait a moment to show success message, then reload to see the route on map
+      setTimeout(() => {
+        window.location.href = '/'
+      }, 1500)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload planned route')
     } finally {
@@ -73,11 +67,12 @@ export default function UploadPlannedRoute({ onUploadComplete }: UploadPlannedRo
       setSuccess(null)
 
       await api.clearPlannedRoute()
-      setSuccess('Planned route cleared successfully')
+      setSuccess('Planned route cleared successfully. Refreshing page...')
 
-      if (onUploadComplete) {
-        onUploadComplete()
-      }
+      // Wait a moment to show success message, then reload
+      setTimeout(() => {
+        window.location.href = '/'
+      }, 1500)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to clear planned route')
     } finally {

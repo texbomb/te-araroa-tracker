@@ -57,8 +57,8 @@ async def get_planned_route(
     db: Session = Depends(get_db)
 ):
     """Get all planned route sections"""
-    # Cache for 1 hour - route changes infrequently
-    response.headers["Cache-Control"] = "public, max-age=3600"
+    # Cache for 5 minutes - allow quick updates when routes are uploaded
+    response.headers["Cache-Control"] = "public, max-age=300"
 
     sections = db.query(PlannedRoute).order_by(PlannedRoute.section_order).all()
     return sections
